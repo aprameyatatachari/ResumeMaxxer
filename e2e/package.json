@@ -1,0 +1,15 @@
+{
+  "name": "resumemaxxer-e2e",
+  "version": "0.0.0",
+  "description": "End-to-end tests for ResumeMaxxer",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "install-browsers": "playwright install --with-deps chromium"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  },
+  "private": true
+}

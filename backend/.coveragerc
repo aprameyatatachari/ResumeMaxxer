@@ -1,0 +1,13 @@
+[run]
+source = .
+omit =
+    tests/*
+    .venv/*
+    dev_reset_db.py
+
+[report]
+# Fail the build if coverage regresses. Raise this as the suite grows; never
+# lower it to make a red build green.
+fail_under = 90
+show_missing = true
+skip_covered = false
