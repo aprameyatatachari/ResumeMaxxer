@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# AI Resume Tailor — Backend dependencies (Python 3.11+)
+#
+# Install:  pip install -r requirements.txt
+# Versions are pinned with `~=` (compatible release) so patch/minor security
+# fixes are picked up while avoiding surprise breaking changes in CI.
+# ---------------------------------------------------------------------------
+
+# --- Web framework & ASGI server -------------------------------------------
+fastapi~=0.115.14
+uvicorn[standard]~=0.32.1          # [standard] adds uvloop/httptools + websockets
+
+# --- Data validation / settings --------------------------------------------
+# Pydantic v2 powers both FastAPI request models AND the Gemini structured
+# output schemas described in product.md §5 ("Strict JSON Output").
+pydantic~=2.13.5
+pydantic-settings~=2.6.1           # typed env-var loading (12-factor config)
+
+# --- ORM & database driver --------------------------------------------------
+sqlmodel~=0.0.33                   # SQLAlchemy 2.0 + Pydantic models in one
+sqlalchemy~=2.0.52                 # pinned explicitly: we use 2.0-style APIs
+psycopg2-binary~=2.9.12            # PostgreSQL driver for NeonDB (sslmode=require)
+
+# --- Configuration ----------------------------------------------------------
+python-dotenv~=1.0.1               # loads backend/.env during local development
+
+# --- AI engine --------------------------------------------------------------
+# `google-genai` is Google's current SDK. product.md names the older
+# `google-generativeai`, but that package is retired — it prints a deprecation
+# notice on import and no longer receives updates or bug fixes. All Gemini
+# calls stay behind ai_service.py, which is what made the swap a one-file change.
+google-genai~=2.22.0
+
+# --- Authentication (Clerk JWT verification) --------------------------------
+# Clerk signs session tokens with RS256. We fetch Clerk's JWKS and verify
+# locally, so [crypto] (which pulls in `cryptography`) is required.
+pyjwt[crypto]~=2.9.0
+
+# --- Job description parsing ------------------------------------------------
+# Companies send JDs as attachments, so the tailoring endpoint takes a file
+# upload rather than pasted text. Legacy .doc is deliberately unsupported - it
+# would need LibreOffice or antiword as a system dependency.
+pypdf~=5.1.0                       # PDF text extraction (pure Python)
+python-docx~=1.1.2                 # .docx paragraphs and tables
+
+# --- HTTP client ------------------------------------------------------------
+# Used for (a) fetching Clerk's JWKS endpoint and (b) the GitHub REST API
+# import flow described in product.md §3A.
+httpx~=0.28.1                      # >=0.28.1 is required by google-genai
+
+# --- Misc -------------------------------------------------------------------
+python-multipart~=0.0.32           # required: /api/tailor takes a multipart upload
+email-validator~=2.2.0             # enables Pydantic's EmailStr type

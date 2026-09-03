@@ -1,0 +1,40 @@
+# --- Local prompt scratch ---
+prompt.txt
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Python / backend ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Node (frontend + auth-server) ---
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Test artifacts ---
+.coverage
+coverage.xml
+htmlcov/
+e2e/playwright-report/
+e2e/test-results/
+e2e/blob-report/
+playwright/.cache/
