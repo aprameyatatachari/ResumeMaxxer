@@ -32,6 +32,27 @@ if (!process.env.BETTER_AUTH_SECRET) {
   )
 }
 
+/**
+ * Whether this database needs a TLS connection.
+ *
+ * Managed Postgres (Neon, RDS, Supabase) requires it; a database on localhost
+ * generally has no TLS configured, and forcing it there fails the connection
+ * rather than falling back. An explicit `sslmode` in the URL always wins.
+ */
+function requiresTls(connectionString: string | undefined): boolean {
+  if (!connectionString) return false
+
+  try {
+    const url = new URL(connectionString)
+    const sslmode = url.searchParams.get('sslmode')
+    if (sslmode) return sslmode !== 'disable'
+    return !['localhost', '127.0.0.1', '::1'].includes(url.hostname)
+  } catch {
+    // Unparseable: assume remote, which is the safer default.
+    return true
+  }
+}
+
 const BASE_URL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
@@ -43,10 +64,13 @@ export const auth = betterAuth({
   // manages its own tables, so the two schemas never collide.
   database: new Pool({
     connectionString: process.env.DATABASE_URL,
-    // Neon requires TLS. `rejectUnauthorized: false` is acceptable here because
-    // the hostname is pinned in the connection string and Neon terminates TLS
-    // with a certificate chain node does not always have locally.
-    ssl: { rejectUnauthorized: false },
+    // TLS only when the database is remote. Neon requires it, but a local
+    // PostgreSQL - a dev container, or the one CI spins up - does not speak
+    // SSL at all and rejects the connection outright with "The server does not
+    // support SSL connections". `rejectUnauthorized: false` is acceptable for
+    // the remote case because the hostname is pinned in the connection string
+    // and Neon terminates TLS with a chain node does not always have locally.
+    ssl: requiresTls(process.env.DATABASE_URL) ? { rejectUnauthorized: false } : false,
     max: 5,
   }),
 

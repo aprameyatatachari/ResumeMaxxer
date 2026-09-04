@@ -1,0 +1,9 @@
+# Test-only dependencies. Not installed in production.
+-r requirements.txt
+
+pytest~=8.3.3
+pytest-cov~=6.0.0
+
+# Generates real PDFs for the job-description parser tests. Test-only: the app
+# never creates PDFs server-side (that happens in the browser).
+reportlab~=4.2.5

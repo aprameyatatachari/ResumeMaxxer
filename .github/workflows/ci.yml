@@ -1,0 +1,269 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Lets a red build be re-run without an empty commit.
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous run - no point paying for
+# CI on a commit that has already been superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Fast feedback: these three run in parallel and cover most regressions.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        # A clean resolve from requirements.txt is itself a test: it has
+        # already caught a pin that only worked because pip had silently
+        # upgraded it in a long-lived local virtualenv.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        working-directory: backend
+        # No database, no network, no API keys: the suite runs against
+        # in-memory SQLite with the AI and GitHub calls mocked. The coverage
+        # floor lives in .coveragerc.
+        run: pytest --cov=. --cov-report=term-missing --cov-report=xml
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
+
+  frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Production build
+        working-directory: frontend
+        # Proves the app still compiles and bundles, which typecheck alone
+        # does not - Tailwind and the PDF chunk split both fail at build time.
+        env:
+          VITE_AUTH_URL: http://localhost:3000
+          VITE_API_URL: http://localhost:8000
+        run: npm run build
+
+  auth-server:
+    name: Auth service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: auth-server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: auth-server
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: auth-server
+        run: npm run typecheck
+
+  # ---------------------------------------------------------------------------
+  # The real thing: all three services against a real PostgreSQL.
+  # Gated behind the fast jobs so an obvious failure does not wait on it.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, auth-server]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: resumemaxxer
+          POSTGRES_PASSWORD: resumemaxxer
+          POSTGRES_DB: resumemaxxer
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://resumemaxxer:resumemaxxer@localhost:5432/resumemaxxer
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789abcdef
+      FRONTEND_URL: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173
+      ENVIRONMENT: development
+      # The AI endpoints are covered by the mocked backend tests; the e2e suite
+      # never reaches Gemini, so no key is needed here.
+      GEMINI_API_KEY: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # --- Install ---------------------------------------------------------
+      - name: Install auth service
+        working-directory: auth-server
+        run: npm ci
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install backend
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install e2e
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # --- Migrate ---------------------------------------------------------
+      # Order matters: Better Auth owns `user`/`session`/`jwks`, the API owns
+      # `users`/`educations`/... They share one database but not one schema.
+      - name: Create auth tables
+        working-directory: auth-server
+        run: npm run migrate
+
+      - name: Create API tables
+        working-directory: backend
+        run: python -c "from database import init_db; init_db()"
+
+      # --- Start the stack -------------------------------------------------
+      # Logs go to files rather than step output: a backgrounded process
+      # writing to the step's stdout produces nothing useful once the step
+      # ends, and if a service dies the log is the only way to find out why.
+      - name: Start auth service
+        working-directory: auth-server
+        run: nohup npm run start > /tmp/auth.log 2>&1 &
+
+      - name: Start backend
+        working-directory: backend
+        run: nohup uvicorn main:app --port 8000 > /tmp/api.log 2>&1 &
+
+      - name: Start frontend
+        working-directory: frontend
+        # Dev server, not preview: the e2e suite exercises /pdf-sandbox, which
+        # is deliberately excluded from production builds.
+        env:
+          VITE_AUTH_URL: http://localhost:3000
+          VITE_API_URL: http://localhost:8000
+        run: nohup npm run dev > /tmp/frontend.log 2>&1 &
+
+      - name: Wait for all three to answer
+        run: |
+          for url in \
+            http://localhost:3000/health \
+            http://localhost:8000/health \
+            http://localhost:5173/ ; do
+            echo "waiting for $url"
+            timeout 90 bash -c \
+              "until curl -sf -o /dev/null '$url'; do sleep 2; done" \
+              || { echo "::error::$url never became ready"; exit 1; }
+            echo "  ready"
+          done
+
+      # Runs whether or not the wait succeeded, so a service that failed to
+      # boot shows its reason instead of only a timeout.
+      - name: Service logs
+        if: always()
+        run: |
+          for name in auth api frontend; do
+            echo "::group::$name"
+            tail -n 40 "/tmp/$name.log" 2>/dev/null || echo "(no log)"
+            echo "::endgroup::"
+          done
+
+      # --- Test ------------------------------------------------------------
+      - name: Run Playwright
+        working-directory: e2e
+        run: npm test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # One required check to point branch protection at, so adding a job later
+  # does not mean reconfiguring the rule.
+  # ---------------------------------------------------------------------------
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [backend, frontend, auth-server, e2e]
+    steps:
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "All checks passed."
