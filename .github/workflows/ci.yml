@@ -195,13 +195,16 @@ jobs:
         run: python -c "from database import init_db; init_db()"
 
       # --- Start the stack -------------------------------------------------
+      # Logs go to files rather than step output: a backgrounded process
+      # writing to the step's stdout produces nothing useful once the step
+      # ends, and if a service dies the log is the only way to find out why.
       - name: Start auth service
         working-directory: auth-server
-        run: npm run start &
+        run: nohup npm run start > /tmp/auth.log 2>&1 &
 
       - name: Start backend
         working-directory: backend
-        run: uvicorn main:app --port 8000 &
+        run: nohup uvicorn main:app --port 8000 > /tmp/api.log 2>&1 &
 
       - name: Start frontend
         working-directory: frontend
@@ -210,7 +213,7 @@ jobs:
         env:
           VITE_AUTH_URL: http://localhost:3000
           VITE_API_URL: http://localhost:8000
-        run: npm run dev &
+        run: nohup npm run dev > /tmp/frontend.log 2>&1 &
 
       - name: Wait for all three to answer
         run: |
@@ -223,6 +226,17 @@ jobs:
               "until curl -sf -o /dev/null '$url'; do sleep 2; done" \
               || { echo "::error::$url never became ready"; exit 1; }
             echo "  ready"
+          done
+
+      # Runs whether or not the wait succeeded, so a service that failed to
+      # boot shows its reason instead of only a timeout.
+      - name: Service logs
+        if: always()
+        run: |
+          for name in auth api frontend; do
+            echo "::group::$name"
+            tail -n 40 "/tmp/$name.log" 2>/dev/null || echo "(no log)"
+            echo "::endgroup::"
           done
 
       # --- Test ------------------------------------------------------------

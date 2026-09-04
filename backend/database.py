@@ -59,9 +59,12 @@ def _normalise_database_url(raw_url: str) -> str:
       Neon (and Heroku-style providers) still emit the legacy ``postgres://``
       scheme, which SQLAlchemy 2.0 refuses to parse.
 
-    * Ensure ``sslmode=require``
-      Neon only accepts TLS connections. If the developer pasted a URL without
-      the query parameter, we add it rather than failing at connect time.
+    * Ensure ``sslmode=require`` for REMOTE databases only
+      Neon only accepts TLS connections, so a URL without the parameter gets it
+      added. A database on localhost is left alone: local PostgreSQL usually
+      has no TLS configured, and demanding it there fails the connection with
+      "server does not support SSL connections" rather than falling back. An
+      explicit ``sslmode`` in the URL always wins.
     """
     if raw_url.startswith("postgres://"):
         raw_url = raw_url.replace("postgres://", "postgresql://", 1)
@@ -70,7 +73,8 @@ def _normalise_database_url(raw_url: str) -> str:
 
     # `make_url(...).query` is an immutable mapping; build a mutable copy.
     query = dict(url.query)
-    query.setdefault("sslmode", "require")
+    if url.host not in {"localhost", "127.0.0.1", "::1"}:
+        query.setdefault("sslmode", "require")
 
     return url.set(query=query).render_as_string(hide_password=False)
 
