@@ -1,4 +1,6 @@
-import LazyResumePreview from '../components/LazyResumePreview'
+import { useState } from 'react'
+
+import ResumePreview from '../components/ResumePreview'
 import type { ResumePayload } from '../lib/types'
 
 /**
@@ -92,6 +94,10 @@ const SAMPLE: ResumePayload = {
       ],
     },
   ],
+  selection_rationale:
+    'Led with the Razorpay internship because the role asks for production '
+    + 'Python and PostgreSQL; the Course Scheduler shows the constraint-solving '
+    + 'the posting calls out.',
   skills: [
     { category: 'Languages', items: 'Python, TypeScript, Java, C, SQL, HTML/CSS' },
     { category: 'Frameworks', items: 'FastAPI, React, Node.js, Flask, Tailwind CSS' },
@@ -104,6 +110,11 @@ const SAMPLE: ResumePayload = {
 }
 
 export default function PdfSandbox() {
+  // Editable so the edit-and-re-render flow can be exercised here too. The
+  // Tailor page is the only other place it appears, and reaching that needs a
+  // live Gemini call.
+  const [resume, setResume] = useState(SAMPLE)
+
   return (
     <div className="space-y-6">
       <header>
@@ -117,7 +128,11 @@ export default function PdfSandbox() {
         </p>
       </header>
 
-      <LazyResumePreview resume={SAMPLE} jobTitle="Backend Engineering Intern" />
+      <ResumePreview
+        resume={resume}
+        jobTitle="Backend Engineering Intern"
+        onChange={setResume}
+      />
     </div>
   )
 }

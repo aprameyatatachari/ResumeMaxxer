@@ -253,6 +253,8 @@ export interface ResumePayload {
   experience: ResumeExperience[]
   projects: ResumeProject[]
   skills: SkillCategory[]
+  /** Why the AI picked these entries. Shown in the preview, never printed. */
+  selection_rationale: string
 }
 
 /** Echo of what was actually read out of the uploaded JD, so the student can

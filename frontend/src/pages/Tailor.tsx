@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
-import LazyResumePreview from '../components/LazyResumePreview'
+import ResumePreview from '../components/ResumePreview'
 import { useApi } from '../hooks/useApi'
 import { ApiError } from '../lib/api'
-import type { TailorResponse } from '../lib/types'
+import type { ResumePayload, TailorResponse } from '../lib/types'
 
 const ACCEPTED = '.pdf,.docx,.txt,.md'
 const MAX_BYTES = 5 * 1024 * 1024 // mirrors jd_parser.MAX_UPLOAD_BYTES
@@ -38,6 +38,10 @@ export default function Tailor() {
   const [dragging, setDragging] = useState(false)
   const [jobTitle, setJobTitle] = useState('')
   const [result, setResult] = useState<TailorResponse | null>(null)
+  // The payload the student may have edited. Kept apart from `result` so the
+  // AI's original output is never lost by an edit.
+  const [edited, setEdited] = useState<ResumePayload | null>(null)
+  const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -86,8 +90,11 @@ export default function Tailor() {
     setBusy(true)
     setError(null)
     setResult(null)
+    setEdited(null)
     try {
-      setResult(await api.tailor(file, jobTitle.trim() || undefined))
+      const response = await api.tailor(file, jobTitle.trim() || undefined)
+      setResult(response)
+      setEdited(response.resume)
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'Something went wrong. Try again.',
@@ -240,7 +247,27 @@ export default function Tailor() {
             </div>
           </div>
 
-          <LazyResumePreview resume={result.resume} jobTitle={result.job_title} />
+          {edited && (
+            <ResumePreview
+              resume={edited}
+              jobTitle={result.job_title}
+              onChange={setEdited}
+              saving={saving}
+              onSave={async () => {
+                setSaving(true)
+                setError(null)
+                try {
+                  await api.saveGeneratedResume(result.resume_id, edited)
+                } catch (err) {
+                  setError(
+                    err instanceof ApiError ? err.message : 'Could not save.',
+                  )
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            />
+          )}
 
           <p className="text-center text-xs text-slate-500">
             Read it before you send it. The AI selects and rewrites - you are

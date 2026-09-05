@@ -12,6 +12,7 @@ requirement, not a design choice.
 See [product.md](product.md) for the full product spec.
 
 ```
+latex-pdf     Tectonic, via Docker             :2020
 auth-server/  Better Auth (Node + Express)     :3000
 backend/      FastAPI + SQLModel + Gemini      :8000
 frontend/     Vite + React + TS + Tailwind     :5173
@@ -128,6 +129,17 @@ Without a token GitHub allows 60 API requests per hour per IP; with one, 5,000.
 You need **Python 3.11+** and **Node 20+**. On Windows, `start.bat` runs all
 three services at once once the steps below are done for the first time.
 
+### LaTeX compiler
+
+```bash
+docker compose up -d
+```
+
+The first compile downloads the TeX packages the template needs and takes
+around two minutes; every later one is about a second. The cache is kept in a
+named volume, so this only happens once. Without this service the app runs but
+the preview and download fail with a message telling you to start it.
+
 ### Auth service
 
 ```bash
@@ -239,10 +251,23 @@ instant; each import costs one Gemini call, which is why the batch is capped.
 Partial success is deliberate - one unreadable README does not discard the
 rest.
 
-**PDFs never touch the server.** `@react-pdf/renderer` builds the file in the
-browser from the stored JSON payload. The backend stores the payload, not a
-binary, so a resume re-downloaded months later is byte-identical even after the
-vault changes.
+**The resume is real LaTeX.** `backend/latex_renderer.py` builds the document
+from `resume-template.tex` verbatim and compiles it through a Tectonic
+container, so the output is the genuine template - Latin Modern, true small
+caps, LaTeX's own spacing - rather than an approximation of it. Two lines of
+the original preamble are omitted: `\input{glyphtounicode}` and
+`\pdfgentounicode=1` are pdfTeX-only primitives and Tectonic halts on them.
+They existed to make the PDF ATS-parsable, and Tectonic already emits
+extractable text (asserted in `backend/tests/test_latex_compile.py`).
+
+Every value is escaped before it reaches the document. Vault text is
+user-controlled and LaTeX is a programming language - an unescaped
+`\input{/etc/passwd}` in a bullet would otherwise be executed by the compiler.
+
+**Only the JSON payload is stored, never the PDF.** A resume re-downloaded
+months later is recompiled from the exact payload and comes out identical, even
+after the vault has changed. It also means edits in the preview are just edits
+to that payload, which is how the "edit before downloading" flow works.
 
 ---
 

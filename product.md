@@ -4,7 +4,7 @@
 ResumeMaxxer is an AI-driven application that solves the "resume tailoring" problem for Indian college students. Students build a comprehensive "Master Vault" of all their academic projects, GitHub repositories, extracurriculars, and jobs. When applying for a role, they upload the Job Description (JD) as the company sent it - PDF or Word. The AI selects the most relevant experiences from the Vault, rewrites them to match the JD's keywords (without fabricating), and generates a 1-page ATS-friendly PDF following `resume-template.tex`.
 
 ## 2. Tech Stack
-*   **Frontend:** Vite, React, TypeScript, Tailwind CSS, React Router (`react-router-dom`), `@react-pdf/renderer`, `better-auth`.
+*   **Frontend:** Vite, React, TypeScript, Tailwind CSS, React Router (`react-router-dom`), `better-auth`.
 *   **Backend:** Python 3.11+, FastAPI, Pydantic.
 *   **Database:** NeonDB (Serverless PostgreSQL).
 *   **ORM:** SQLModel.
@@ -26,7 +26,7 @@ ResumeMaxxer is an AI-driven application that solves the "resume tailoring" prob
 *   **Step 1 (Extract):** FastAPI sends the JD to Gemini to extract core keywords and role requirements.
 *   **Step 2 (Filter):** FastAPI queries NeonDB to find the user's `bullets` that match the extracted keywords/tags.
 *   **Step 3 (Rewrite):** FastAPI sends the JD keywords and selected vault bullets to Gemini with a strict prompt to rewrite them into a unified JSON resume structure, keeping to 1 page.
-*   **Step 4 (Render):** React receives the JSON payload and uses `@react-pdf/renderer` to generate the downloadable PDF directly in the browser.
+*   **Step 4 (Render):** FastAPI turns the JSON payload into LaTeX using `resume-template.tex` and compiles it via a Tectonic container; React shows the returned PDF. The student can edit any text in the preview and re-render before downloading.
 
 ## 4. Database Schema (SQLModel / PostgreSQL)
 
@@ -93,4 +93,5 @@ alongside the degree, and recruiters screen on them.
 *   **Strict JSON Output:** The Gemini API must *always* be invoked using Pydantic schemas (Structured Outputs) to ensure the Python backend never crashes due to malformed string parsing.
 *   **The "No Fluff" Rule:** AI outputs for resume bullets must begin with an action verb, utilize the "X by Y using Z" formula where applicable, and absolutely never fabricate metrics or experiences not present in the user's Vault.
 *   **The "One-Page" Rule:** The AI must cap the generated output to a maximum of 3 Education blocks (degree, Class XII, Class X), 4 Experiences/Projects combined, 3-4 bullets per entity, and 4 skill categories, to ensure it fits on a single PDF page. Enforced numerically in `ai_service.enforce_one_page()`, not by prompt alone.
-*   **The Template Rule:** The rendered PDF must reproduce `resume-template.tex` exactly. It is a fixed requirement, not a design brief - do not restyle it.
+*   **The Template Rule:** The PDF *is* `resume-template.tex`, compiled by Tectonic - not a reimplementation of it. The font is LaTeX's default Latin Modern, because the template leaves every font package commented out. Do not enable one.
+*   **The Escaping Rule:** Every value reaching the document goes through `latex_renderer.escape()`. Vault text is user input and LaTeX is executable.

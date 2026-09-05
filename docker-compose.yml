@@ -1,0 +1,39 @@
+# ResumeMaxxer supporting services.
+#
+#   docker compose up -d
+#
+# Only the LaTeX compiler runs here. The three application services stay on the
+# host so they keep hot-reload; `start.bat` launches those.
+
+services:
+  # Compiles the generated .tex into the final PDF.
+  #
+  # The engine inside is Tectonic (XeTeX), not pdfLaTeX. That matters in one
+  # place: `\input{glyphtounicode}` and `\pdfgentounicode=1` are pdfTeX-only
+  # primitives and fail with "Undefined control sequence", so
+  # backend/latex_renderer.py omits them. Tectonic emits Unicode-mapped,
+  # text-extractable PDFs natively, which is what those lines were for.
+  latex-pdf:
+    image: pranavgnn/latex-pdf:latest
+    container_name: resumemaxxer-latex
+    restart: unless-stopped
+    ports:
+      - "2020:3000"
+    environment:
+      # Must match LATEX_API_KEY in backend/.env. Local-only; the service is
+      # not exposed beyond this machine.
+      API_KEY: ${LATEX_API_KEY:-resumemaxxer-local-dev}
+    volumes:
+      # Tectonic downloads the TeX packages it needs on first use. Without a
+      # persisted cache every recreated container pays that again: the first
+      # compile takes ~110s cold versus ~1.3s warm.
+      - tectonic-cache:/root/.cache/Tectonic
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  tectonic-cache:

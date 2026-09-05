@@ -23,6 +23,7 @@ import type {
   GitHubRepoListResponse,
   Project,
   ProjectInput,
+  ResumePayload,
   TailorResponse,
   User,
   UserUpdate,
@@ -93,6 +94,44 @@ async function request<T>(
   }
 
   return body as T
+}
+
+/**
+ * Like `request`, but for endpoints that return a PDF rather than JSON.
+ *
+ * Errors still arrive as JSON, so the failure path decodes the body the same
+ * way and produces the same `ApiError`.
+ */
+async function requestBlob(
+  getToken: TokenGetter,
+  path: string,
+  init: RequestInit = {},
+): Promise<Blob> {
+  const token = await getToken()
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    })
+  } catch {
+    throw new ApiError(
+      0,
+      `Could not reach the API at ${API_BASE}. Is the backend running?`,
+    )
+  }
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status, extractErrorMessage(body, response.status))
+  }
+
+  return response.blob()
 }
 
 /** Turn FastAPI's several error shapes into one human-readable string. */
@@ -209,6 +248,20 @@ export function createApiClient(getToken: TokenGetter) {
         body: form,
       })
     },
+    /** Compile a (possibly edited) payload to PDF. Returns a Blob. */
+    renderPdf: (resume: ResumePayload, jobTitle: string) =>
+      requestBlob(
+        getToken,
+        `/api/tailor/render?job_title=${encodeURIComponent(jobTitle)}`,
+        { method: 'POST', ...json(resume) },
+      ),
+    downloadStoredPdf: (id: number) =>
+      requestBlob(getToken, `/api/tailor/history/${id}/pdf`),
+    saveGeneratedResume: (id: number, resume: ResumePayload) =>
+      request<GeneratedResumeDetail>(getToken, `/api/tailor/history/${id}`, {
+        method: 'PATCH',
+        ...json(resume),
+      }),
     getHistory: () =>
       request<GeneratedResumeSummary[]>(getToken, '/api/tailor/history'),
     getGeneratedResume: (id: number) =>

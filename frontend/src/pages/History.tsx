@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
-import LazyResumePreview from '../components/LazyResumePreview'
+import ResumePreview from '../components/ResumePreview'
 import Spinner from '../components/Spinner'
 import { useApi } from '../hooks/useApi'
 import { ApiError } from '../lib/api'
@@ -127,7 +127,7 @@ export default function History() {
       )}
 
       {selected && (
-        <LazyResumePreview resume={selected.resume_json} jobTitle={selected.job_title} />
+        <ResumePreview resume={selected.resume_json} jobTitle={selected.job_title} />
       )}
     </div>
   )

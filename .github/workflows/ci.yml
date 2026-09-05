@@ -140,8 +140,18 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      # Compiles the generated LaTeX. The e2e PDF test asserts on the real
+      # compiled document, so this is not optional.
+      latex:
+        image: pranavgnn/latex-pdf:latest
+        env:
+          API_KEY: ci-latex-key
+        ports: ['2020:3000']
+
     env:
       DATABASE_URL: postgresql://resumemaxxer:resumemaxxer@localhost:5432/resumemaxxer
+      LATEX_API_URL: http://localhost:2020
+      LATEX_API_KEY: ci-latex-key
       BETTER_AUTH_URL: http://localhost:3000
       BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789abcdef
       FRONTEND_URL: http://localhost:5173
@@ -214,6 +224,31 @@ jobs:
           VITE_AUTH_URL: http://localhost:3000
           VITE_API_URL: http://localhost:8000
         run: nohup npm run dev > /tmp/frontend.log 2>&1 &
+
+      # The first compile downloads the TeX packages the template needs
+      # (~2 min); every later one takes about a second. Warming it here rather
+      # than inside a test keeps the Playwright timeouts honest and makes a
+      # failure legible. Warming through the real renderer, rather than a
+      # minimal document, caches exactly the packages the resume uses.
+      - name: Warm the LaTeX compiler
+        working-directory: backend
+        run: |
+          echo "waiting for the LaTeX service"
+          timeout 90 bash -c             "until curl -sf -o /dev/null http://localhost:2020/docs; do sleep 2; done"             || { echo "::error::LaTeX service never became ready"; exit 1; }
+
+          echo "compiling a sample resume to warm the package cache"
+          python -c "
+          import latex_renderer
+          from schemas import ResumeHeader, ResumePayload
+          payload = ResumePayload(
+              header=ResumeHeader(full_name='CI Warmup', phone='', email='ci@example.com',
+                                  linkedin='', github='', portfolio=''),
+              education=[], experience=[], projects=[], skills=[],
+          )
+          pdf = latex_renderer.render_pdf(payload)
+          assert pdf.startswith(b'%PDF-'), 'warm-up did not return a PDF'
+          print(f'  compiler ready ({len(pdf)} bytes)')
+          "
 
       - name: Wait for all three to answer
         run: |
