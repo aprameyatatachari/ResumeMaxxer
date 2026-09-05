@@ -19,10 +19,4 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: { reporter: ['text', 'lcov'], include: ['src/lib/**', 'src/hooks/**'] },
   },
-  optimizeDeps: {
-    // @react-pdf/renderer ships CommonJS internals that Vite's dev-time
-    // pre-bundler must process, otherwise the first PDF render throws
-    // "does not provide an export named default".
-    include: ['@react-pdf/renderer'],
-  },
 })
