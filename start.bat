@@ -17,7 +17,10 @@ REM  Run from anywhere: double-click, or `start.bat` in a terminal.
 REM  Close the three windows to stop everything.
 REM ===========================================================================
 
-setlocal
+REM  Delayed expansion is needed to read variables set inside the port loop.
+REM  It also makes `!` a metacharacter, so avoid it in echoed text -
+REM  `[!]` would print as `[]`. Markers below use words instead.
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo.
@@ -35,7 +38,7 @@ if not exist "auth-server\.env" set "MISSING=%MISSING% auth-server\.env"
 if not exist "frontend\.env.local" set "MISSING=%MISSING% frontend\.env.local"
 
 if not "%MISSING%"=="" (
-    echo   [X] Missing config file^(s^):%MISSING%
+    echo   [error] Missing config file^(s^):%MISSING%
     echo.
     echo       Copy the templates and fill them in:
     echo         copy backend\.env.example backend\.env
@@ -47,7 +50,7 @@ if not "%MISSING%"=="" (
 )
 
 if not exist "backend\.venv\Scripts\python.exe" (
-    echo   [X] Python virtualenv not found at backend\.venv
+    echo   [error] Python virtualenv not found at backend\.venv
     echo.
     echo       Create it:
     echo         cd backend ^&^& python -m venv .venv
@@ -58,7 +61,7 @@ if not exist "backend\.venv\Scripts\python.exe" (
 )
 
 if not exist "auth-server\node_modules" (
-    echo   [X] auth-server dependencies not installed.
+    echo   [error] auth-server dependencies not installed.
     echo       Run:  cd auth-server ^&^& npm install
     echo.
     pause
@@ -66,21 +69,46 @@ if not exist "auth-server\node_modules" (
 )
 
 if not exist "frontend\node_modules" (
-    echo   [X] frontend dependencies not installed.
+    echo   [error] frontend dependencies not installed.
     echo       Run:  cd frontend ^&^& npm install
     echo.
     pause
     exit /b 1
 )
 
-REM --- Warn about ports already in use, but keep going: a leftover process
-REM     from a previous run is common and the service will say so itself. -----
-
+REM --- Ports ----------------------------------------------------------------
+REM  A leftover process from a previous run is the most common reason a service
+REM  fails to start, and the errors it produces are unhelpful:
+REM     backend   ERROR: [WinError 10013] An attempt was made to access a
+REM                      socket in a way forbidden by its access permissions
+REM     frontend  Error: Port 5173 is already in use
+REM  Neither says what is holding the port, so name the process and give the
+REM  exact command to stop it.
+REM
 REM  The regex matches both IPv4 (0.0.0.0:5173) and IPv6 ([::1]:5173) listeners.
 REM  Vite binds IPv6 by default, so a plain ":%%P " search misses it entirely.
+
+set "PORTS_BUSY="
 for %%P in (2020 3000 8000 5173) do (
-    netstat -ano -p tcp | findstr /r /c:"LISTENING" | findstr /r /c:":%%P[ ]" >nul 2>&1
-    if not errorlevel 1 echo   [!] Port %%P is already in use - that service may fail to start.
+    set "PID_%%P="
+    for /f "tokens=5" %%I in ('netstat -ano -p tcp ^| findstr /r /c:"LISTENING" ^| findstr /r /c:":%%P[ ]"') do (
+        if not defined PID_%%P (
+            set "PID_%%P=%%I"
+            set "PORTS_BUSY=1"
+            for /f "delims=" %%N in ('powershell -NoProfile -Command "(Get-Process -Id %%I -ErrorAction SilentlyContinue).ProcessName"') do (
+                echo   [warn] Port %%P is held by %%N ^(PID %%I^)
+            )
+            echo       Stop it with:  taskkill /PID %%I /F
+        )
+    )
+)
+
+if defined PORTS_BUSY (
+    echo.
+    echo   Those services will fail to start until the ports are free.
+    echo   Press Ctrl+C to stop, or any key to try anyway.
+    pause >nul
+    echo.
 )
 
 REM --- LaTeX compiler -------------------------------------------------------
@@ -89,13 +117,13 @@ REM  it the app runs but the preview and download fail with a clear message.
 
 docker info >nul 2>&1
 if errorlevel 1 (
-    echo   [!] Docker is not running - the PDF preview will not work.
+    echo   [warn] Docker is not running - the PDF preview will not work.
     echo       Start Docker Desktop, then: docker compose up -d
 ) else (
     echo   Starting LaTeX service ^(http://localhost:2020^) ...
     docker compose up -d >nul 2>&1
     if errorlevel 1 (
-        echo   [!] docker compose failed. Run it by hand to see why.
+        echo   [warn] docker compose failed. Run it by hand to see why.
     )
 )
 
