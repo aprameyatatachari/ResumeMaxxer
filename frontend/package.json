@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
-    "@react-pdf/renderer": "^4.9.0",
     "better-auth": "^1.7.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

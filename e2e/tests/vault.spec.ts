@@ -16,15 +16,14 @@ test.beforeEach(async ({ page }) => {
 
 test('contact details persist across a reload', async ({ page }) => {
   await page.getByLabel('Phone').fill('+91 98765 43210')
-  await page.getByLabel('GitHub', { exact: true }).fill('github.com/ananyak')
+  await page.getByLabel('GitHub username').fill('ananyak')
   await page.getByRole('button', { name: 'Save contact details' }).click()
 
   await expect(page.getByText('Saved.')).toBeVisible()
 
   await page.reload()
-  await expect(page.getByLabel('GitHub', { exact: true })).toHaveValue(
-    'github.com/ananyak',
-  )
+  // The field holds the username only; the prefix is shown as a static addon.
+  await expect(page.getByLabel('GitHub username')).toHaveValue('ananyak')
 })
 
 test('a degree is saved with month-and-year dates and a CGPA', async ({ page }) => {

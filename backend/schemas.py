@@ -515,8 +515,9 @@ class ResumeProject(BaseModel):
 
     name: str
     tech_stack: str = Field(
-        description="Comma-separated, rendered in italics after a pipe, "
-        "e.g. 'Python, FastAPI, PostgreSQL, Docker'."
+        description="AT MOST 5 technologies, comma-separated, most relevant to "
+        "the job description first, e.g. 'Python, FastAPI, PostgreSQL'. More "
+        "than five wraps the heading onto a second line."
     )
     date_range: str = Field(description="Copy verbatim from the vault, or ''.")
     bullets: list[str] = Field(description="3-4 rewritten achievement lines.")
@@ -550,6 +551,19 @@ class ResumePayload(BaseModel):
     experience: list[ResumeExperience]
     projects: list[ResumeProject]
     skills: list[SkillCategory] = Field(description="3-4 categories.")
+
+    # Shown in the preview so the student can judge the AI's choices before
+    # sending the resume. Deliberately NOT rendered onto the document - the
+    # template has no slot for it and a recruiter should never see it.
+    selection_rationale: str = Field(
+        default="",
+        description="One or two sentences on why THESE experiences and "
+        "projects were chosen for THIS role, naming the specific "
+        "requirement each one answers. Written to the student, e.g. "
+        "'Led with the Razorpay internship because the role asks for "
+        "production Python; the scheduler project shows the constraint "
+        "solving they mention.'",
+    )
 
 
 class TailorResponse(BaseModel):

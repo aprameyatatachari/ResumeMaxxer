@@ -2,7 +2,9 @@
 REM ===========================================================================
 REM  ResumeMaxxer - start everything
 REM
-REM  Launches the three services in separate windows:
+REM  Starts the LaTeX compiler container, then launches the three application
+REM  services in separate windows:
+REM     latex-pdf    http://localhost:2020   Tectonic (Docker)
 REM     auth-server  http://localhost:3000   Better Auth (Node)
 REM     backend      http://localhost:8000   FastAPI
 REM     frontend     http://localhost:5173   Vite
@@ -76,9 +78,25 @@ REM     from a previous run is common and the service will say so itself. -----
 
 REM  The regex matches both IPv4 (0.0.0.0:5173) and IPv6 ([::1]:5173) listeners.
 REM  Vite binds IPv6 by default, so a plain ":%%P " search misses it entirely.
-for %%P in (3000 8000 5173) do (
+for %%P in (2020 3000 8000 5173) do (
     netstat -ano -p tcp | findstr /r /c:"LISTENING" | findstr /r /c:":%%P[ ]" >nul 2>&1
     if not errorlevel 1 echo   [!] Port %%P is already in use - that service may fail to start.
+)
+
+REM --- LaTeX compiler -------------------------------------------------------
+REM  The resume is generated as real LaTeX and compiled by a container. Without
+REM  it the app runs but the preview and download fail with a clear message.
+
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo   [!] Docker is not running - the PDF preview will not work.
+    echo       Start Docker Desktop, then: docker compose up -d
+) else (
+    echo   Starting LaTeX service ^(http://localhost:2020^) ...
+    docker compose up -d >nul 2>&1
+    if errorlevel 1 (
+        echo   [!] docker compose failed. Run it by hand to see why.
+    )
 )
 
 REM --- Launch ---------------------------------------------------------------

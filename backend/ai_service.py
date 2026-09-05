@@ -37,6 +37,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, ValidationError
 
+import latex_renderer
 from schemas import (
     JDAnalysis,
     RepoAnalysis,
@@ -219,6 +220,12 @@ def enforce_one_page(payload: ResumePayload) -> ResumePayload:
 
     payload.experience = [_trim_entry(e) for e in payload.experience]
     payload.projects = [_trim_entry(p) for p in payload.projects]
+
+    # Same reasoning as every other cap here: the prompt asks for at most five
+    # technologies, this makes it true. An imported repo often carries a dozen,
+    # which wraps the project heading onto a second line.
+    for project in payload.projects:
+        project.tech_stack = latex_renderer.trim_tech_stack(project.tech_stack)
 
     # Budget: experience first, projects fill whatever is left.
     experience_budget = min(len(payload.experience), MAX_ENTRIES_TOTAL)
@@ -407,20 +414,35 @@ Instructions:
    Order most recent first: degree, then Class XII, then Class X. Drop the
    school rows if the student has strong work experience and space is tight.
 
-5. EXPERIENCE and PROJECTS: copy `date_range`, `organization`, `location` and
-   the project `tech_stack` from the vault verbatim. Only the bullets get
-   rewritten.
+5. EXPERIENCE comes before projects and outranks them. Internships and jobs
+   are what a recruiter screens on hardest, so include EVERY relevant role in
+   the vault before spending entries on projects. Never drop an experience to
+   make room for a project.
 
-6. SKILLS: group into 3-4 categories with bold labels, exactly like a technical
+6. EXPERIENCE and PROJECTS: copy `date_range`, `organization` and `location`
+   from the vault verbatim. Only the bullets get rewritten.
+
+7. PROJECT `tech_stack`: pick AT MOST 5 technologies from the vault's list,
+   most relevant to this job description first. The vault often holds a dozen
+   for an imported repo; listing them all wraps the heading onto a second line
+   and reads as noise. Comma-separated, e.g. "Python, FastAPI, PostgreSQL".
+
+8. SKILLS: group into 3-4 categories with bold labels, exactly like a technical
    resume - "Languages", "Frameworks", "Developer Tools", "Libraries",
    "Databases". Put the categories the job description cares about most first,
    and inside each category order by relevance. Only list skills the vault
    actually evidences.
 
-7. HEADER: full_name = "{student_name}", email = "{student_email}". Fill phone,
+9. HEADER: full_name = "{student_name}", email = "{student_email}". Fill phone,
    linkedin, github and portfolio ONLY from the vault; use an empty string for
    anything not there. Write links bare, without a scheme:
    "github.com/name", not "https://github.com/name".
+
+10. `selection_rationale`: one or two sentences, written TO the student,
+    explaining why you chose these particular experiences and projects for
+    this role - name the specific requirement each one answers. This is shown
+    in the preview so they can sanity-check your choices; it is never printed
+    on the resume itself.
 
 Note there is no summary or objective section. Do not invent one.
 """.strip()

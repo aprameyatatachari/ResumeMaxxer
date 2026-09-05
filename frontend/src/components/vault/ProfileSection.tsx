@@ -64,7 +64,9 @@ export default function ProfileSection({
       <div className="mb-3">
         <h2 className="text-lg font-semibold text-slate-900">Contact details</h2>
         <p className="text-xs text-slate-500">
-          These become the header line of every resume you generate.
+          These become the header line of every resume you generate. For
+          LinkedIn and GitHub, enter just your username — the rest of the link
+          is added for you.
         </p>
       </div>
 
@@ -135,29 +137,43 @@ export default function ProfileSection({
             />
           </div>
 
+          {/* The prefix is shown as a non-editable addon so there is no
+              question what belongs in the box: the username, not a URL. The
+              backend normalises a full URL if one is pasted anyway, but this
+              stops people wondering. */}
           <div>
             <label className="label" htmlFor="linkedin">
-              LinkedIn
+              LinkedIn username
             </label>
-            <input
-              id="linkedin"
-              className="input"
-              value={form.linkedin_url}
-              onChange={(event) => update('linkedin_url', event.target.value)}
-              placeholder="linkedin.com/in/your-name"
-            />
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                linkedin.com/in/
+              </span>
+              <input
+                id="linkedin"
+                className="input rounded-l-none"
+                value={form.linkedin_url}
+                onChange={(event) => update('linkedin_url', event.target.value)}
+                placeholder="your-name"
+              />
+            </div>
           </div>
           <div>
             <label className="label" htmlFor="github">
-              GitHub
+              GitHub username
             </label>
-            <input
-              id="github"
-              className="input"
-              value={form.github_url}
-              onChange={(event) => update('github_url', event.target.value)}
-              placeholder="github.com/your-name"
-            />
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                github.com/
+              </span>
+              <input
+                id="github"
+                className="input rounded-l-none"
+                value={form.github_url}
+                onChange={(event) => update('github_url', event.target.value)}
+                placeholder="your-username"
+              />
+            </div>
           </div>
 
           <div className="sm:col-span-2">
@@ -169,7 +185,7 @@ export default function ProfileSection({
               className="input"
               value={form.portfolio_url}
               onChange={(event) => update('portfolio_url', event.target.value)}
-              placeholder="your-name.dev"
+              placeholder="your-name.dev — full domain, no https://"
             />
           </div>
         </div>

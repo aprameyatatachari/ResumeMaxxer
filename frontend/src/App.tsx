@@ -32,14 +32,19 @@ export default function App() {
           <Route path="/vault" element={<VaultPage />} />
           <Route path="/tailor" element={<Tailor />} />
           <Route path="/history" element={<History />} />
-        </Route>
 
-        {/* Dev-only PDF sandbox. `import.meta.env.DEV` is statically replaced
-            at build time, so the route and its fixture are tree-shaken out of
-            the production bundle entirely. */}
-        {import.meta.env.DEV && (
-          <Route path="/pdf-sandbox" element={<PdfSandbox />} />
-        )}
+          {/* Dev-only PDF sandbox. `import.meta.env.DEV` is statically replaced
+              at build time, so the route and its fixture are tree-shaken out of
+              the production bundle entirely.
+
+              It sits behind the auth guard because the PDF is now compiled by
+              the backend, and that endpoint needs a token - signed out, it
+              would render an unhelpful "Missing Authorization header" instead
+              of a resume. */}
+          {import.meta.env.DEV && (
+            <Route path="/pdf-sandbox" element={<PdfSandbox />} />
+          )}
+        </Route>
 
         <Route path="*" element={<NotFound />} />
       </Route>

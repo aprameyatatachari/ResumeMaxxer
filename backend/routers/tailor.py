@@ -43,6 +43,7 @@ from sqlmodel import Session, select
 
 import ai_service
 import jd_parser
+import latex_renderer
 from auth import get_current_user
 from database import get_session
 from models import (
@@ -60,6 +61,7 @@ from schemas import (
     GeneratedResumeRead,
     GeneratedResumeSummary,
     JobDescriptionSource,
+    ResumePayload,
     TailorResponse,
 )
 
@@ -434,6 +436,97 @@ def read_generated_resume(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found."
         )
+    return record
+
+
+# ---------------------------------------------------------------------------
+# PDF rendering
+# ---------------------------------------------------------------------------
+def _pdf_response(payload: ResumePayload, job_title: str) -> Response:
+    """Compile a payload to PDF and return it inline.
+
+    `inline` rather than `attachment`: the frontend shows this in an iframe as
+    the live preview, and the same bytes are what the download button saves.
+    """
+    try:
+        pdf = latex_renderer.render_pdf(payload)
+    except latex_renderer.LatexRenderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+    name = re.sub(r"[^A-Za-z0-9]+", "_", f"{payload.header.full_name} {job_title}")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{name.strip("_")}.pdf"',
+            # The payload can change between renders (the student edits it), so
+            # never let a proxy or the browser serve a stale document.
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.post("/render", summary="Compile a resume payload to PDF")
+def render_resume(
+    payload: ResumePayload,
+    job_title: str = "Resume",
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Render an arbitrary payload.
+
+    This is what makes the preview editable: the student changes a bullet in
+    the browser, the edited payload comes back here, and they get the real
+    document rather than an approximation of it. Nothing is stored - use
+    `PATCH /history/{id}` to persist an edit.
+    """
+    return _pdf_response(payload, job_title)
+
+
+@router.get("/history/{resume_id}/pdf", summary="Download a stored resume as PDF")
+def download_generated_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Recompile a stored payload.
+
+    The PDF is not kept - only the JSON is - so a resume downloaded months
+    later is regenerated from the exact payload and comes out identical.
+    """
+    record = session.get(GeneratedResume, resume_id)
+    if record is None or record.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found."
+        )
+    return _pdf_response(
+        ResumePayload.model_validate(record.resume_json), record.job_title
+    )
+
+
+@router.patch(
+    "/history/{resume_id}",
+    response_model=GeneratedResumeRead,
+    summary="Save an edited resume",
+)
+def update_generated_resume(
+    resume_id: int,
+    payload: ResumePayload,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> GeneratedResume:
+    """Persist edits the student made in the preview."""
+    record = session.get(GeneratedResume, resume_id)
+    if record is None or record.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found."
+        )
+
+    record.resume_json = payload.model_dump()
+    session.add(record)
+    session.commit()
+    session.refresh(record)
     return record
 
 

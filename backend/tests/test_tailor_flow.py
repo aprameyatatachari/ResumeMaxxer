@@ -13,6 +13,7 @@ from datetime import date
 import pytest
 
 import ai_service
+import latex_renderer
 from models import Bullet, EntityType, Experience, GeneratedResume
 from schemas import (
     JDAnalysis,
@@ -60,6 +61,8 @@ RESUME = ResumePayload(
         date_range="Jan. 2025", bullets=["Built a constraint solver"],
     )],
     skills=[SkillCategory(category="Languages", items="Python, TypeScript")],
+    selection_rationale="Chose the Razorpay internship because the role asks "
+                        "for production Python.",
 )
 
 
@@ -113,11 +116,14 @@ def test_tailoring_returns_a_renderable_payload_and_stores_it(
     assert body["source"]["char_count"] > 0
     assert "Python" in body["source"]["preview"]
 
-    # Section order and shape must match the template the PDF renderer expects.
+    # Section order and shape must match the template the renderer expects.
+    # `selection_rationale` rides along for the preview but is never rendered.
     assert list(body["resume"]) == [
-        "header", "education", "experience", "projects", "skills"
+        "header", "education", "experience", "projects", "skills",
+        "selection_rationale",
     ]
     assert body["resume"]["skills"][0]["category"] == "Languages"
+    assert body["resume"]["selection_rationale"].startswith("Chose the")
 
     stored = session.get(GeneratedResume, body["resume_id"])
     assert stored is not None
@@ -184,3 +190,95 @@ def test_another_users_resume_is_not_reachable(client, session, other_user):
 
     assert client.get(f"/api/tailor/history/{theirs.id}").status_code == 404
     assert client.delete(f"/api/tailor/history/{theirs.id}").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# PDF rendering
+# ---------------------------------------------------------------------------
+@pytest.fixture(name="mock_latex")
+def mock_latex_fixture(monkeypatch):
+    """Stand in for the LaTeX service.
+
+    Compilation needs Docker, so it is exercised by the e2e suite instead. What
+    matters here is that the endpoint hands the renderer the right payload and
+    returns the bytes as a PDF.
+    """
+    seen = {}
+
+    def render_pdf(payload):
+        seen["payload"] = payload
+        return b"%PDF-1.5 fake pdf bytes %%EOF"
+
+    monkeypatch.setattr(latex_renderer, "render_pdf", render_pdf)
+    return seen
+
+
+def test_render_endpoint_compiles_an_arbitrary_payload(client, mock_latex):
+    """This is what makes the preview editable - the browser posts the edited
+    payload and gets the real document back."""
+    response = client.post(
+        "/api/tailor/render?job_title=Backend%20Intern", json=RESUME.model_dump()
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content.startswith(b"%PDF-")
+    # Never cached: the payload changes as the student edits.
+    assert response.headers["cache-control"] == "no-store"
+    assert "Ananya_Krishnan_Backend_Intern.pdf" in response.headers["content-disposition"]
+    assert mock_latex["payload"].header.full_name == "Ananya Krishnan"
+
+
+def test_stored_resume_downloads_as_pdf(client, stocked_vault, mock_ai, mock_latex):
+    resume_id = client.post("/api/tailor", files={"file": JD_FILE}).json()["resume_id"]
+
+    response = client.get(f"/api/tailor/history/{resume_id}/pdf")
+    assert response.status_code == 200
+    assert response.content.startswith(b"%PDF-")
+
+
+def test_edits_can_be_saved_back_to_a_stored_resume(client, stocked_vault, mock_ai):
+    resume_id = client.post("/api/tailor", files={"file": JD_FILE}).json()["resume_id"]
+
+    edited = RESUME.model_copy(deep=True)
+    edited.experience[0].bullets = ["A bullet the student rewrote by hand"]
+
+    response = client.patch(
+        f"/api/tailor/history/{resume_id}", json=edited.model_dump()
+    )
+    assert response.status_code == 200
+    assert (
+        response.json()["resume_json"]["experience"][0]["bullets"][0]
+        == "A bullet the student rewrote by hand"
+    )
+
+    # And it persisted.
+    reopened = client.get(f"/api/tailor/history/{resume_id}").json()
+    assert reopened["resume_json"]["experience"][0]["bullets"][0].startswith("A bullet")
+
+
+def test_a_latex_failure_is_a_502_with_the_reason(client, monkeypatch):
+    def boom(_payload):
+        raise latex_renderer.LatexRenderError("The PDF service is not running.")
+
+    monkeypatch.setattr(latex_renderer, "render_pdf", boom)
+
+    response = client.post("/api/tailor/render", json=RESUME.model_dump())
+    assert response.status_code == 502
+    assert "not running" in response.text
+
+
+@pytest.mark.parametrize("path", ["/api/tailor/history/999/pdf"])
+def test_another_users_pdf_is_not_reachable(client, session, other_user, path):
+    theirs = GeneratedResume(
+        user_id=other_user.id, job_title="Theirs", jd_text="...",
+        resume_json=RESUME.model_dump(),
+    )
+    session.add(theirs)
+    session.commit()
+    session.refresh(theirs)
+
+    assert client.get(f"/api/tailor/history/{theirs.id}/pdf").status_code == 404
+    assert client.patch(
+        f"/api/tailor/history/{theirs.id}", json=RESUME.model_dump()
+    ).status_code == 404
