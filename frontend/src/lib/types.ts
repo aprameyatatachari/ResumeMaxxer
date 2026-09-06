@@ -202,6 +202,9 @@ export interface JDAnalysis {
   hard_skills: string[]
   soft_skills: string[]
   keywords: string[]
+  /** Subset of `keywords` drawn from the qualifications section. Scored at
+   *  double weight when matching the vault. */
+  required_keywords: string[]
   seniority: string
 }
 
@@ -263,6 +266,11 @@ export interface JobDescriptionSource {
   filename: string
   char_count: number
   preview: string
+  /** The posting's own requirements section, when it has one. Empty heading
+   *  means none was found and the whole document was used instead. */
+  qualifications_heading: string
+  required_qualifications: string[]
+  preferred_qualifications: string[]
 }
 
 export interface TailorResponse {

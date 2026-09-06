@@ -270,16 +270,43 @@ You write resume content for college students. Absolute rules:
 # ---------------------------------------------------------------------------
 # Step 1 - Extract requirements from the job description
 # ---------------------------------------------------------------------------
-def analyse_job_description(jd_text: str) -> JDAnalysis:
-    """Pull structured requirements out of a pasted JD."""
+def analyse_job_description(
+    jd_text: str, qualifications_block: str = ""
+) -> JDAnalysis:
+    """Pull structured requirements out of a job description.
+
+    `qualifications_block` is the posting's own requirements section, extracted
+    deterministically by `jd_qualifications`. When present it is the part the
+    role is screened on, so it is quoted separately and its terms come back in
+    `required_keywords` for double-weight scoring. When the document has no
+    such section the parameter is empty and this behaves as it always did:
+    inference over the whole text.
+    """
     system_instruction = (
         "You are an expert technical recruiter and ATS analyst. You read job "
         "descriptions and extract exactly what the hiring team screens for. "
         "Return only what the text supports; never speculate."
     )
+
+    if qualifications_block:
+        priority = f"""
+REQUIRED QUALIFICATIONS - THIS IS WHAT THE ROLE IS SCREENED ON.
+Weight these above anything else in the posting. Every one of them should be
+represented in `keywords`, and the terms drawn from here must ALSO be listed in
+`required_keywords`.
+---
+{qualifications_block[:6000]}
+---
+"""
+    else:
+        priority = """
+This posting has no separate qualifications section, so infer the requirements
+from the document as a whole. Leave `required_keywords` empty.
+"""
+
     prompt = f"""
 Analyse the job description below.
-
+{priority}
 Extract:
 - job_title: the normalised role title.
 - company: the hiring company, or an empty string if not stated.
@@ -288,9 +315,11 @@ Extract:
 - keywords: 10-20 lowercase single words or short phrases an ATS would scan
   for. These are matched against a database of tags, so keep them short and
   canonical ("python", "rest api", "ci/cd") rather than sentences.
+- required_keywords: the subset of `keywords` that comes from the required
+  qualifications above. Empty if there was no such section.
 - seniority: one of internship, entry, mid, senior.
 
-JOB DESCRIPTION:
+FULL JOB DESCRIPTION:
 ---
 {jd_text[:15000]}
 ---
@@ -364,6 +393,7 @@ def tailor_resume(
     vault_context: str,
     student_name: str,
     student_email: str,
+    qualifications_block: str = "",
 ) -> ResumePayload:
     """Produce the final resume payload for @react-pdf/renderer.
 
@@ -377,11 +407,30 @@ def tailor_resume(
         + "\n\nYou select and rewrite existing material. You are a ruthless "
         "editor, not an author. Every claim must trace back to the vault."
     )
+    if qualifications_block:
+        priority = f"""
+THE ROLE'S STATED QUALIFICATIONS - SATISFY THESE FIRST.
+This is the section the posting screens candidates on. Where you must choose
+between two pieces of vault material, pick the one that answers a requirement
+here. Mirror this section's wording in the bullets wherever the vault
+truthfully supports it.
+---
+{qualifications_block[:6000]}
+---
+PRIORITY KEYWORDS (drawn from the section above): {", ".join(analysis.required_keywords) or "(none)"}
+"""
+    else:
+        priority = """
+This posting has no separate qualifications section, so the requirements below
+were inferred from the document as a whole. Weight them evenly.
+"""
+
     prompt = f"""
 Build a tailored, one-page, ATS-friendly resume for an Indian college student.
 
 TARGET ROLE: {analysis.job_title} ({analysis.seniority})
 COMPANY: {analysis.company or "(not stated)"}
+{priority}
 REQUIRED HARD SKILLS: {", ".join(analysis.hard_skills)}
 REQUIRED SOFT SKILLS: {", ".join(analysis.soft_skills)}
 ATS KEYWORDS: {", ".join(analysis.keywords)}
@@ -394,7 +443,9 @@ STUDENT VAULT (the ONLY source of truth - every claim must come from here):
 Instructions:
 
 1. SELECT the most relevant material. Leaving things out is the main tool you
-   have - anything that does not help for this specific role is noise.
+   have - anything that does not help for this specific role is noise. When a
+   qualifications section is given above, relevance means "answers one of
+   those requirements", not "sounds impressive".
 
 2. HARD LIMITS (going over means it does not fit on one page):
    - at most 3 education rows
@@ -440,7 +491,8 @@ Instructions:
 
 10. `selection_rationale`: one or two sentences, written TO the student,
     explaining why you chose these particular experiences and projects for
-    this role - name the specific requirement each one answers. This is shown
+    this role. Quote the specific stated qualification each one answers when a
+    qualifications section was given. This is shown
     in the preview so they can sanity-check your choices; it is never printed
     on the resume itself.
 

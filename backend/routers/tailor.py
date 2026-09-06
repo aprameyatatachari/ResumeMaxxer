@@ -43,6 +43,7 @@ from sqlmodel import Session, select
 
 import ai_service
 import jd_parser
+import jd_qualifications
 import latex_renderer
 from auth import get_current_user
 from database import get_session
@@ -90,18 +91,49 @@ def _tokenise(text: str) -> set[str]:
     return set(_TOKEN_RE.findall(text.lower()))
 
 
-def _score_bullet(bullet: Bullet, keyword_tokens: set[str]) -> int:
+# Relevance weights. Two independent axes, multiplied:
+#
+#   where the match is   tag 3x  vs  body text 1x
+#     Tags were assigned deliberately - by Gemini at ingestion or by the
+#     student - whereas a body-text match can be incidental.
+#
+#   what was matched     stated requirement 2x  vs  inferred keyword 1x
+#     A term from the posting's own qualifications section is what the role is
+#     screened on. An inferred keyword is our guess about the rest of the
+#     document.
+TAG_WEIGHT = 3
+TEXT_WEIGHT = 1
+REQUIRED_MULTIPLIER = 2
+
+
+def _score_bullet(
+    bullet: Bullet,
+    keyword_tokens: set[str],
+    required_tokens: set[str] | None = None,
+) -> int:
     """Rank one bullet's relevance to the job description.
 
-    Tag matches are weighted 3x body-text matches: tags were assigned
-    deliberately (by Gemini at ingestion, or by the student), whereas a body
-    match can be incidental. Every bullet scores at least 0, so a student with
-    an unusual background still gets a resume rather than an empty page.
+    `required_tokens` are the terms drawn from the posting's qualifications
+    section; they count double. When the posting has no such section the set is
+    empty and this reduces exactly to the previous behaviour.
+
+    Every bullet scores at least 0, so a student with an unusual background
+    still gets a resume rather than an empty page.
     """
+    required = required_tokens or set()
+    # A required term is not also counted as a general one, or it would be
+    # scored three times rather than twice.
+    general = keyword_tokens - required
+
     tag_tokens = _tokenise(bullet.tags.replace(",", " "))
     text_tokens = _tokenise(f"{bullet.original_text} {bullet.ai_enhanced_text or ''}")
 
-    return 3 * len(tag_tokens & keyword_tokens) + len(text_tokens & keyword_tokens)
+    def score(tokens: set[str], weight: int) -> int:
+        return weight * (
+            REQUIRED_MULTIPLIER * len(tokens & required) + len(tokens & general)
+        )
+
+    return score(tag_tokens, TAG_WEIGHT) + score(text_tokens, TEXT_WEIGHT)
 
 
 def _format_date_range(start: date, end: Optional[date]) -> str:
@@ -289,10 +321,21 @@ async def tailor_resume(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
 
+    # The posting's own requirements section, if it has one. Extracted
+    # deterministically rather than by the AI: it decides what the whole
+    # tailoring run optimises for, and a wrong answer would silently skew every
+    # resume. `None` means no such section, and everything falls back to
+    # whole-document inference.
+    qualifications = jd_qualifications.extract(jd_text)
+    qualifications_block = qualifications.as_prompt_block() if qualifications else ""
+
     source = JobDescriptionSource(
         filename=file.filename or "job-description",
         char_count=len(jd_text),
         preview=jd_text[:600],
+        qualifications_heading=qualifications.heading if qualifications else "",
+        required_qualifications=qualifications.required if qualifications else [],
+        preferred_qualifications=qualifications.preferred if qualifications else [],
     )
 
     # --- Load the vault ---------------------------------------------------
@@ -320,7 +363,9 @@ async def tailor_resume(
 
     # --- Step 1: extract requirements from the JD ------------------------
     try:
-        analysis = ai_service.analyse_job_description(jd_text)
+        analysis = ai_service.analyse_job_description(
+            jd_text, qualifications_block=qualifications_block
+        )
     except ai_service.AIServiceError as exc:
         logger.error("JD analysis failed: %s", exc)
         raise HTTPException(
@@ -332,9 +377,17 @@ async def tailor_resume(
     keyword_tokens = _tokenise(
         " ".join([*analysis.keywords, *analysis.hard_skills, *analysis.soft_skills])
     )
+    # Terms the posting explicitly requires, scored at double weight. Both the
+    # AI's reading of the section and its raw text are used - the raw text
+    # catches specifics the model may have normalised away.
+    required_tokens: set[str] = set()
+    if qualifications:
+        required_tokens = _tokenise(
+            " ".join([*analysis.required_keywords, *qualifications.required])
+        ) & keyword_tokens
 
     scored = sorted(
-        ((_score_bullet(b, keyword_tokens), b) for b in all_bullets),
+        ((_score_bullet(b, keyword_tokens, required_tokens), b) for b in all_bullets),
         key=lambda pair: pair[0],
         reverse=True,
     )
@@ -368,6 +421,7 @@ async def tailor_resume(
             vault_context=vault_context,
             student_name=student_name or "Your Name",
             student_email=current_user.email,
+            qualifications_block=qualifications_block,
         )
     except ai_service.AIServiceError as exc:
         logger.error("Resume generation failed: %s", exc)
