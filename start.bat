@@ -14,7 +14,11 @@ REM  allowlists are pinned to them, so a service that moves will fail to
 REM  authenticate rather than silently degrade.
 REM
 REM  Run from anywhere: double-click, or `start.bat` in a terminal.
-REM  Close the three windows to stop everything.
+REM
+REM  To stop: run `stop.bat`. Closing the three windows is not enough - each
+REM  runs a child process that can survive its console and keep holding a
+REM  port, which is what makes the next run fail with "Port 5173 is already in
+REM  use". This script offers to clear those leftovers on startup too.
 REM ===========================================================================
 
 REM  Delayed expansion is needed to read variables set inside the port loop.
@@ -95,19 +99,41 @@ for %%P in (2020 3000 8000 5173) do (
         if not defined PID_%%P (
             set "PID_%%P=%%I"
             set "PORTS_BUSY=1"
-            for /f "delims=" %%N in ('powershell -NoProfile -Command "(Get-Process -Id %%I -ErrorAction SilentlyContinue).ProcessName"') do (
+            for /f "delims=" %%N in ('powershell -NoProfile -Command "(Get-Process -Id %%I -EA SilentlyContinue).ProcessName"') do (
                 echo   [warn] Port %%P is held by %%N ^(PID %%I^)
             )
-            echo       Stop it with:  taskkill /PID %%I /F
         )
     )
 )
 
+REM  Almost always an orphan from the last run: closing a service window does
+REM  not reliably kill the node or python child it started. Offer to clear it
+REM  rather than making the user read a WinError and go hunting for a PID.
+REM
+REM  Port 2020 is the LaTeX container and is deliberately left alone - it is
+REM  meant to keep running, and `docker compose up -d` below reuses it.
 if defined PORTS_BUSY (
     echo.
-    echo   Those services will fail to start until the ports are free.
-    echo   Press Ctrl+C to stop, or any key to try anyway.
-    pause >nul
+    echo   These are usually leftovers from the last run.
+    set /p "FREEPORTS=  Stop them and continue? [Y/n] "
+    if /i not "!FREEPORTS!"=="n" (
+        for %%P in (3000 8000 5173) do (
+            if defined PID_%%P (
+                taskkill /PID !PID_%%P! /T /F >nul 2>&1
+                echo   Freed port %%P
+            )
+        )
+        REM  Give Windows a moment to release the sockets.
+        REM
+        REM  `ping` rather than `timeout`: timeout.exe refuses to run when
+        REM  stdin is not a real console ("Input redirection is not
+        REM  supported"), which breaks the script when it is piped or launched
+        REM  from another shell. The full path avoids a coreutils `timeout` or
+        REM  `ping` on PATH shadowing the Windows one.
+        "%SystemRoot%\System32\ping.exe" -n 3 127.0.0.1 >nul 2>&1
+    ) else (
+        echo   Left running - those services will fail to start.
+    )
     echo.
 )
 
@@ -137,12 +163,12 @@ start "ResumeMaxxer auth" cmd /k "cd /d "%~dp0auth-server" && npm run dev"
 REM  The backend fetches the auth service's JWKS on its first authenticated
 REM  request, not at boot, so it does not need auth to be up first. The pause
 REM  is only so the three windows appear in a sensible order.
-timeout /t 2 /nobreak >nul
+"%SystemRoot%\System32\ping.exe" -n 3 127.0.0.1 >nul 2>&1
 
 echo   Starting backend       ^(http://localhost:8000^) ...
 start "ResumeMaxxer backend" cmd /k "cd /d "%~dp0backend" && .venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000"
 
-timeout /t 2 /nobreak >nul
+"%SystemRoot%\System32\ping.exe" -n 3 127.0.0.1 >nul 2>&1
 
 echo   Starting frontend      ^(http://localhost:5173^) ...
 start "ResumeMaxxer frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
@@ -154,7 +180,7 @@ echo     App        http://localhost:5173
 echo     API docs   http://localhost:8000/docs
 echo     Health     http://localhost:8000/health
 echo.
-echo   Close those windows to stop the services.
+echo   To stop everything and free the ports:  stop.bat
 echo.
 
 endlocal

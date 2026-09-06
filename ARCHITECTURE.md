@@ -474,6 +474,15 @@ Things that have already caused a bug here. Each cost real debugging time.
 8. **`start.bat` uses `enabledelayedexpansion`**, which makes `!` a
    metacharacter — `[!]` in an `echo` prints as `[]`.
 
+9. **Closing a service window does not kill what it started.** `npm run dev`
+   and `npm run start` spawn a child that can outlive the console and keep its
+   port. Use `stop.bat`; `start.bat` also offers to clear leftovers.
+
+10. **Do not use `timeout /t` in a batch script here.** `timeout.exe` refuses
+    to run when stdin is not a real console (*"Input redirection is not
+    supported"*), and a coreutils `timeout` on PATH shadows it anyway. Use
+    `"%SystemRoot%\System32\ping.exe" -n <sec+1> 127.0.0.1 >nul`.
+
 ---
 
 ## 12. Deliberate divergences from `product.md`
