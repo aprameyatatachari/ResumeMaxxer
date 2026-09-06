@@ -38,6 +38,7 @@ ANALYSIS = JDAnalysis(
     hard_skills=["Python", "FastAPI", "PostgreSQL"],
     soft_skills=["collaboration"],
     keywords=["python", "fastapi", "postgresql", "docker"],
+    required_keywords=[],
     seniority="internship",
 )
 
@@ -88,13 +89,16 @@ def stocked_vault_fixture(session, user):
 def mock_ai_fixture(monkeypatch):
     calls = {}
 
-    def analyse(jd_text):
+    def analyse(jd_text, qualifications_block=""):
         calls["jd_text"] = jd_text
+        calls["analysis_qualifications"] = qualifications_block
         return ANALYSIS
 
-    def tailor(*, analysis, vault_context, student_name, student_email):
+    def tailor(*, analysis, vault_context, student_name, student_email,
+               qualifications_block=""):
         calls["vault_context"] = vault_context
         calls["student_name"] = student_name
+        calls["tailor_qualifications"] = qualifications_block
         return RESUME
 
     monkeypatch.setattr(ai_service, "analyse_job_description", analyse)
@@ -155,7 +159,7 @@ def test_an_explicit_job_title_overrides_the_inferred_one(
 def test_ai_failure_becomes_a_502_not_a_500(client, stocked_vault, monkeypatch):
     """The frontend needs to tell "the AI failed" apart from "your request was
     wrong", so this must not surface as a generic server error."""
-    def boom(_jd_text):
+    def boom(_jd_text, qualifications_block=""):
         raise ai_service.AIServiceError("Gemini returned malformed output.")
 
     monkeypatch.setattr(ai_service, "analyse_job_description", boom)
@@ -282,3 +286,117 @@ def test_another_users_pdf_is_not_reachable(client, session, other_user, path):
     assert client.patch(
         f"/api/tailor/history/{theirs.id}", json=RESUME.model_dump()
     ).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Prioritising the posting's stated qualifications
+# ---------------------------------------------------------------------------
+QUALIFIED_JD = (
+    "jd.txt",
+    b"""Data Analyst Intern
+
+About us
+We are a healthcare analytics company doing interesting work.
+
+Required Qualifications
+1. Strong SQL and data modelling skills.
+2. Clear written and verbal communication.
+3. Exposure to large datasets.
+
+Preferred Qualifications
+- Prior consulting internship
+
+Benefits
+Health cover.
+""",
+    "text/plain",
+)
+
+
+def test_the_qualifications_section_is_detected_and_echoed(client, stocked_vault, mock_ai):
+    """The student needs to see which part of the posting drove the tailoring."""
+    body = client.post("/api/tailor", files={"file": QUALIFIED_JD}).json()
+    source = body["source"]
+
+    assert source["qualifications_heading"] == "Required Qualifications"
+    assert len(source["required_qualifications"]) == 3
+    assert source["required_qualifications"][0].startswith("Strong SQL")
+    assert source["preferred_qualifications"] == ["Prior consulting internship"]
+    # The section must stop before the unrelated headings around it.
+    assert not any("Health cover" in q for q in source["required_qualifications"])
+
+
+def test_both_prompts_receive_the_qualifications(client, stocked_vault, mock_ai):
+    """Priority is applied in two places: keyword extraction and the rewrite.
+    Passing it to only one would half-work in a way nobody would notice."""
+    client.post("/api/tailor", files={"file": QUALIFIED_JD})
+
+    assert "Required Qualifications" in mock_ai["analysis_qualifications"]
+    assert "Strong SQL" in mock_ai["analysis_qualifications"]
+    assert "Strong SQL" in mock_ai["tailor_qualifications"]
+
+
+def test_a_posting_without_a_section_falls_back_to_whole_jd_inference(
+    client, stocked_vault, mock_ai
+):
+    """Explicitly the requested behaviour: no section, previous behaviour."""
+    body = client.post("/api/tailor", files={"file": JD_FILE}).json()
+
+    assert body["source"]["qualifications_heading"] == ""
+    assert body["source"]["required_qualifications"] == []
+    # And the prompts say so, rather than being handed an empty block.
+    assert mock_ai["analysis_qualifications"] == ""
+    assert mock_ai["tailor_qualifications"] == ""
+
+
+def test_required_terms_outrank_inferred_ones_when_shortlisting(
+    client, session, user, monkeypatch
+):
+    """The scoring half of the feature, end to end.
+
+    Two bullets, each matching one keyword. Only one of those keywords comes
+    from the stated qualifications, so that bullet must reach the AI first.
+    """
+    from models import Bullet, EntityType, Project
+
+    project = Project(user_id=user.id, title="Work", tech_stack="")
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+
+    session.add_all([
+        Bullet(user_id=user.id, entity_type=EntityType.PROJECT, entity_id=project.id,
+               original_text="Wrote reports in Excel", tags="excel"),
+        Bullet(user_id=user.id, entity_type=EntityType.PROJECT, entity_id=project.id,
+               original_text="Modelled warehouse tables in SQL", tags="sql"),
+    ])
+    session.commit()
+
+    seen = {}
+
+    def analyse(jd_text, qualifications_block=""):
+        return JDAnalysis(
+            job_title="Data Analyst Intern", company="",
+            hard_skills=["sql", "excel"], soft_skills=[],
+            keywords=["sql", "excel"],
+            # Only SQL is a stated requirement.
+            required_keywords=["sql"],
+            seniority="internship",
+        )
+
+    def tailor(*, analysis, vault_context, student_name, student_email,
+               qualifications_block=""):
+        seen["vault_context"] = vault_context
+        return RESUME
+
+    monkeypatch.setattr(ai_service, "analyse_job_description", analyse)
+    monkeypatch.setattr(ai_service, "tailor_resume", tailor)
+
+    client.post("/api/tailor", files={"file": QUALIFIED_JD})
+
+    context = seen["vault_context"]
+    assert "Modelled warehouse tables in SQL" in context
+    # Both survive the shortlist here, but the required one must rank first.
+    assert context.index("Modelled warehouse tables in SQL") < context.index(
+        "Wrote reports in Excel"
+    )

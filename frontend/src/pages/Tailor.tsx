@@ -238,9 +238,53 @@ export default function Tailor() {
               {result.analysis.company ? ` · ${result.analysis.company}` : ''} ·{' '}
               {result.analysis.seniority}
             </p>
+
+            {/* Which part of the posting drove the tailoring. Worth showing:
+                a JD with a stated requirements list is tailored against that
+                list, and one without falls back to reading the whole
+                document - the results differ, so the student should know
+                which happened. */}
+            {result.source.qualifications_heading ? (
+              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <p className="text-xs font-semibold text-emerald-800">
+                  Prioritised the posting's “{result.source.qualifications_heading}”
+                  section
+                </p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-slate-700">
+                  {result.source.required_qualifications.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+                {result.source.preferred_qualifications.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Plus {result.source.preferred_qualifications.length} nice-to-have
+                    {result.source.preferred_qualifications.length === 1 ? '' : 's'},
+                    weighted lower.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                No stated qualifications section in this posting, so the whole
+                document was used to infer what matters.
+              </p>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-1.5">
               {result.analysis.keywords.map((keyword) => (
-                <span key={keyword} className="chip">
+                <span
+                  key={keyword}
+                  className={
+                    result.analysis.required_keywords.includes(keyword)
+                      ? 'chip bg-emerald-100 text-emerald-800'
+                      : 'chip'
+                  }
+                  title={
+                    result.analysis.required_keywords.includes(keyword)
+                      ? 'From the stated qualifications - matched at double weight'
+                      : 'Inferred from the rest of the posting'
+                  }
+                >
                   {keyword}
                 </span>
               ))}

@@ -389,6 +389,13 @@ class JobDescriptionSource(BaseModel):
     char_count: int
     preview: str
 
+    # The qualifications section, when the document has one. Shown in the UI so
+    # the student can see which part of the posting drove the tailoring - and
+    # notice when nothing was found and the whole document was used instead.
+    qualifications_heading: str = ""
+    required_qualifications: list[str] = []
+    preferred_qualifications: list[str] = []
+
 
 class GeneratedResumeRead(BaseModel):
     """A stored tailoring run. `resume_json` is the exact @react-pdf payload."""
@@ -431,6 +438,13 @@ class JDAnalysis(BaseModel):
     )
     keywords: list[str] = Field(
         description="Lowercase ATS keywords to match against Vault bullet tags."
+    )
+    required_keywords: list[str] = Field(
+        default_factory=list,
+        description="The subset of `keywords` that comes from the job "
+        "description's qualifications/requirements section, if it has one. "
+        "These are what the role is actually screened on, so they are scored "
+        "at double weight. Empty when the document has no such section.",
     )
     seniority: str = Field(description="One of: internship, entry, mid, senior.")
 
