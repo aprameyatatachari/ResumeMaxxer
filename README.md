@@ -24,8 +24,20 @@ All three share one NeonDB instance. Start everything at once on Windows:
 start.bat
 ```
 
-It checks the config files and dependencies first, then opens each service in
-its own window.
+It checks the config files and dependencies first, offers to clear any ports
+still held by a previous run, then opens each service in its own window.
+
+To stop:
+
+```bash
+stop.bat
+```
+
+Use this rather than closing the windows. `npm run dev` and `npm run start`
+each spawn a child process that can outlive its console and keep holding a
+port, which is what produces `Error: Port 5173 is already in use` on the next
+run. `stop.bat` kills whatever is listening on 3000/8000/5173 and stops the
+LaTeX container. The Tectonic package cache is a named volume and survives it.
 
 ### Why auth is a separate service
 
