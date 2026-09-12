@@ -42,8 +42,29 @@ from schemas import ResumePayload
 
 logger = logging.getLogger("resumemaxxer.latex")
 
-LATEX_API_URL: str = os.getenv("LATEX_API_URL", "http://localhost:2020").rstrip("/")
-LATEX_API_KEY: str = os.getenv("LATEX_API_KEY", "resumemaxxer-local-dev")
+
+def api_url() -> str:
+    """Where the LaTeX compiler is listening.
+
+    Read per call rather than once at import. On Vercel this value comes from a
+    service binding (`vercel.json` -> services.api.bindings), and bindings are
+    injected at runtime only - they do not resolve during a build. Reading it
+    lazily means nothing depends on whether module import happened before or
+    after the platform populated the environment, and tests can point it
+    somewhere else with `monkeypatch.setenv`.
+
+    Locally this is the port docker-compose publishes.
+    """
+    return os.getenv("LATEX_API_URL", "http://localhost:2020").rstrip("/")
+
+
+def api_key() -> str:
+    """Shared secret for the compiler, sent as `x-api-key`.
+
+    Local development has a known default so `docker compose up` works with no
+    configuration; a deployment must set both sides to the same real value.
+    """
+    return os.getenv("LATEX_API_KEY", "resumemaxxer-local-dev")
 
 # A cold compile downloads TeX packages and can take ~2 minutes; a warm one is
 # about a second. The generous ceiling only matters on a fresh container.
@@ -448,15 +469,16 @@ def compile_pdf(latex: str) -> bytes:
     Raises `LatexRenderError` with a message written for the student, since it
     is surfaced in the UI.
     """
+    url = api_url()
     try:
         response = httpx.post(
-            f"{LATEX_API_URL}/convert",
+            f"{url}/convert",
             json={"latex": latex},
-            headers={"x-api-key": LATEX_API_KEY},
+            headers={"x-api-key": api_key()},
             timeout=COMPILE_TIMEOUT_SECONDS,
         )
     except httpx.RequestError as exc:
-        logger.exception("Could not reach the LaTeX service at %s", LATEX_API_URL)
+        logger.exception("Could not reach the LaTeX service at %s", url)
         raise LatexRenderError(
             "The PDF service is not running. Start it with "
             "`docker compose up -d` and try again."

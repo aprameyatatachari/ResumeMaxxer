@@ -483,9 +483,142 @@ Things that have already caused a bug here. Each cost real debugging time.
     supported"*), and a coreutils `timeout` on PATH shadows it anyway. Use
     `"%SystemRoot%\System32\ping.exe" -n <sec+1> 127.0.0.1 >nul`.
 
+11. **Run `backend/migrate.py` on every deploy that changes a model.**
+    `create_all` never adds a column to a table that already exists. This has
+    broken the app twice: once as `column users.phone does not exist`, and
+    again while adding the quota columns, where a clean-looking deploy 500ed
+    every authenticated endpoint. `migrate.py` now handles additive columns and
+    verifies the result, but it only helps if it is actually run.
+
+12. **`BETTER_AUTH_URL` must resolve identically in both services.** It is the
+    JWT `iss` *and* `aud`, and both are verified. The precedence is duplicated
+    in `auth-server/src/auth.ts` (`resolveBaseUrl`) and `backend/auth.py`
+    (`_resolve_auth_url`) because the two cannot share code. A mismatch does
+    not fail loudly - it 401s every authenticated request, which reads as a
+    broken login rather than a config error.
+
+13. **Never add a `USER` directive to `latex/Dockerfile.vercel`.** The warm-up
+    compile caches into `$HOME/.cache/Tectonic` as root, and the running
+    service reads it from there. A different user at runtime silently reverts
+    cold starts to ~110s while everything still appears to work.
+
+14. **The JD upload cap must stay under 4.5 MB.** Vercel rejects a larger body
+    before the app sees it, with a bare platform 413 instead of the message
+    that tells a student their file is a scan.
+
 ---
 
-## 12. Deliberate divergences from `product.md`
+## 12. The free allowance and bring-your-own-key
+
+Gemini costs money per call and tailoring makes two of them. This is an app for
+Indian college students: the ones who need it most can pay least, and the
+person building it cannot absorb thousands of runs either.
+
+So the cost model has two tiers:
+
+| | Who pays | Limit |
+|---|---|---|
+| Free | the app's `GEMINI_API_KEY` | `quota.FREE_RUNS_PER_WEEK` (3) per student per week |
+| Own key | the student's Gemini free tier | unlimited |
+
+### Weekly, and reset without a scheduler
+
+`users.free_runs_used` holds the count and `users.free_runs_week` holds the
+**Monday of the week it belongs to**. A stored week earlier than the current
+one means the count is stale, and stale reads as zero.
+
+That is the whole reset mechanism. No cron, no background worker, nothing
+happens at midnight on Monday — so nothing can fail to happen at midnight on
+Monday, and the arithmetic is still right if the app was down all week.
+
+Weekly rather than lifetime because job hunting is bursty: a student applying
+to six companies in placement week needs more than three that week and none the
+next month. A lifetime cap of twenty is spent in a fortnight and then the app
+is dead to them.
+
+Monday in **UTC**. Indian students are UTC+5:30, so their week turns over at
+05:30 local. A single global instant is unambiguous and matches what the API
+reports, and "resets Monday morning" is true either way.
+
+### The allowance is charged AFTER the work succeeds
+
+`quota.check()` runs before anything expensive, so an out-of-quota student is
+turned away in milliseconds rather than after an upload and two Gemini calls.
+`quota.consume()` runs only once the resume is stored.
+
+That ordering is deliberate and it is the important part. With three runs a
+week, charging for a run that died on a Gemini timeout costs the student a
+third of their week for our failure. The cost of the ordering is the opposite
+race — two simultaneous requests can both pass the check and both succeed,
+yielding a fourth run — which is a far better failure than billing for work
+that was never delivered.
+
+### The key never touches the server's disk
+
+The student's key lives in their browser (`frontend/src/lib/gemini-key.ts`,
+`localStorage`) and travels on each request as `X-Gemini-Api-Key`. The server
+uses it for that call and forgets it. No column, no encryption key to manage,
+no table worth stealing.
+
+The key *has* to reach the server — Gemini is called server-side — but keeping
+a copy at rest is avoidable, so it is avoided. What the student trades is
+per-device convenience: they paste it again on their phone.
+
+Rules that hold this together:
+
+- **The key is never logged.** `ai_service._redact()` strips it from any SDK
+  exception text before it reaches a log line or an error message, and nothing
+  else writes it anywhere. Verified against real logs: zero occurrences.
+- **The key is never returned.** The API reports *whether* a key was used
+  (`QuotaStatus.using_own_key`), never its value. The UI shows only
+  `AIza…last4`.
+- **A rejected key is a 400, not a 502.** `InvalidApiKeyError` exists so a
+  student whose key is wrong is told to fix their key, instead of being told
+  the service is down and to retry — which would never work.
+
+### Where the header goes
+
+`X-Gemini-Api-Key` must appear in three places or the feature silently half
+works:
+
+1. `backend/gemini_key.py` — `HEADER_NAME`, and the FastAPI dependency
+2. `backend/main.py` — the CORS `allow_headers` list, or the browser preflight
+   rejects it in local development
+3. `frontend/src/lib/api.ts` — `keyHeader()`, read **per request** rather than
+   captured when the client is built, because `useApi()` memoises one client
+   for the whole session and a key saved after mount would never be seen
+
+GitHub import honours the key when present but is **not** charged against the
+allowance — see §15.
+
+---
+
+## 13. Deployment
+
+One Vercel project, four services, one domain, routed by path:
+
+```
+/api/auth/*  ->  auth-server/     (Express, zero-config)
+/api/*       ->  backend/         (FastAPI, entrypoint main:app)
+/*           ->  frontend/        (Vite static build)
+internal     ->  latex/           (container, service binding, no public route)
+```
+
+Same-origin is load-bearing, not cosmetic: it keeps the Better Auth session
+cookie first-party, which Safari already requires, and it makes every CORS rule
+in the codebase redundant in production.
+
+The LaTeX container has no persistent volume on Vercel and scales to zero after
+five minutes, so Tectonic's package cache is **baked into the image at build
+time** by `latex/Dockerfile.vercel`. Measured: a cold container compiles an
+unseen document in 1.01s instead of ~110s.
+
+`DEPLOYMENT.md` has the full setup, the measured limits, and the reasoning
+`vercel.json` cannot carry because JSON has no comments.
+
+---
+
+## 14. Deliberate divergences from `product.md`
 
 | product.md | Reality | Why |
 |---|---|---|
@@ -498,11 +631,19 @@ Things that have already caused a bug here. Each cost real debugging time.
 
 ---
 
-## 13. Known gaps
+## 15. Known gaps
 
-- **No Alembic.** `create_all` only creates. Blocking for a real deploy.
-- **No rate limiting** on `/api/tailor` or `/api/github/import-batch`. Both
-  spend money per call.
+- **No Alembic.** `backend/migrate.py` covers the additive cases - new tables,
+  new columns - and refuses anything destructive. Dropping, renaming or
+  retyping a column still needs a hand-written migration, and there is no
+  version history or down-migration. That is the remaining gap.
+- **`/api/github/import-batch` is not rate limited** and spends one Gemini
+  call per repo. `/api/tailor` is now bounded by the weekly free allowance
+  (§12), but importing is deliberately not, because a student has to build a
+  vault before tailoring is worth anything - gating the first step would mean
+  hitting a wall before seeing the app work. A student who has added their own
+  key runs imports on it, but a free user's imports still spend the app's key.
+  Worth a cap if it is ever abused.
 - **Email verification is off** in `auth-server/src/auth.ts`, to keep the MVP
   loop short.
 - **`dev_reset_db.py` still exists** and would destroy real users' vaults.

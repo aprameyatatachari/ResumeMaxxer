@@ -53,8 +53,51 @@ function requiresTls(connectionString: string | undefined): boolean {
   }
 }
 
-const BASE_URL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
+/**
+ * This service's own public origin.
+ *
+ * It is the JWT `iss` AND `aud` claim, and the backend verifies both, so
+ * `backend/auth.py` implements this exact precedence. Change one, change the
+ * other, or every request 401s with "Invalid authentication token".
+ *
+ *   1. BETTER_AUTH_URL           explicit, and what a real deployment should set
+ *   2. VERCEL_PROJECT_PRODUCTION_URL   the project's shortest production domain,
+ *                                      used only for production deployments
+ *   3. VERCEL_URL                this deployment's own URL, which is what makes
+ *                                preview deployments work without configuration
+ *   4. localhost:3000            development
+ *
+ * Vercel's variables carry no scheme, hence the https:// prefix. They also
+ * require "Enable access to System Environment Variables" in project settings;
+ * without it only step 1 and step 4 can ever fire.
+ */
+function resolveBaseUrl(): string {
+  const explicit = process.env.BETTER_AUTH_URL
+  if (explicit) return explicit.replace(/\/$/, '')
+
+  if (
+    process.env.VERCEL_ENV === 'production' &&
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+
+  return 'http://localhost:3000'
+}
+
+const BASE_URL = resolveBaseUrl()
+
+/**
+ * Where the browser app is served from.
+ *
+ * Deployed, this is the same origin as BASE_URL - the frontend and this
+ * service sit behind one domain, split by path - so it falls back to BASE_URL
+ * rather than to a localhost port that would not be trusted in production.
+ */
+const FRONTEND_URL =
+  process.env.FRONTEND_URL ?? (process.env.VERCEL ? BASE_URL : 'http://localhost:5173')
 
 export const auth = betterAuth({
   baseURL: BASE_URL,
@@ -82,9 +125,16 @@ export const auth = betterAuth({
     minPasswordLength: 8,
   },
 
-  // The browser sends cookies to this origin from the Vite app, so that origin
-  // has to be trusted explicitly - this is the CSRF protection.
-  trustedOrigins: [FRONTEND_URL],
+  // The browser sends cookies to this origin from the app, so that origin has
+  // to be trusted explicitly - this is the CSRF protection, and an origin
+  // missing from here fails with a bare 403 that looks nothing like a CSRF
+  // error, so it is worth being thorough.
+  //
+  // Both are listed because the two deployment shapes differ: locally they are
+  // different ports, and on Vercel they are one origin (so this collapses to a
+  // single entry). Deduplicated rather than conditional - a duplicate entry
+  // would be harmless but confusing to read in a log.
+  trustedOrigins: [...new Set([FRONTEND_URL, BASE_URL])],
 
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days

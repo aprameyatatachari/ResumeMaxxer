@@ -27,7 +27,13 @@ logger = logging.getLogger("resumemaxxer.jd_parser")
 
 # Guard rails. A job description is a few kilobytes of text; anything far
 # larger is a mistake or an attack, and parsing it wastes memory and time.
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+#
+# 4 MB rather than 5: a Vercel Function rejects a request body over 4.5 MB
+# before our code ever runs, with a bare platform 413. A cap above that limit
+# would mean uploads in the 4.5-5 MB band failing with an opaque error instead
+# of the message below, which is the one that actually tells a student their
+# file is a scan. Staying under the platform limit keeps every rejection ours.
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
 MAX_EXTRACTED_CHARS = 20_000
 MIN_EXTRACTED_CHARS = 50
 

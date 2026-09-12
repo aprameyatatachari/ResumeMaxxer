@@ -89,16 +89,18 @@ def stocked_vault_fixture(session, user):
 def mock_ai_fixture(monkeypatch):
     calls = {}
 
-    def analyse(jd_text, qualifications_block=""):
+    def analyse(jd_text, qualifications_block="", api_key=None):
         calls["jd_text"] = jd_text
         calls["analysis_qualifications"] = qualifications_block
+        calls["analysis_api_key"] = api_key
         return ANALYSIS
 
     def tailor(*, analysis, vault_context, student_name, student_email,
-               qualifications_block=""):
+               qualifications_block="", api_key=None):
         calls["vault_context"] = vault_context
         calls["student_name"] = student_name
         calls["tailor_qualifications"] = qualifications_block
+        calls["tailor_api_key"] = api_key
         return RESUME
 
     monkeypatch.setattr(ai_service, "analyse_job_description", analyse)
@@ -159,7 +161,7 @@ def test_an_explicit_job_title_overrides_the_inferred_one(
 def test_ai_failure_becomes_a_502_not_a_500(client, stocked_vault, monkeypatch):
     """The frontend needs to tell "the AI failed" apart from "your request was
     wrong", so this must not surface as a generic server error."""
-    def boom(_jd_text, qualifications_block=""):
+    def boom(_jd_text, qualifications_block="", api_key=None):
         raise ai_service.AIServiceError("Gemini returned malformed output.")
 
     monkeypatch.setattr(ai_service, "analyse_job_description", boom)
@@ -374,7 +376,7 @@ def test_required_terms_outrank_inferred_ones_when_shortlisting(
 
     seen = {}
 
-    def analyse(jd_text, qualifications_block=""):
+    def analyse(jd_text, qualifications_block="", api_key=None):
         return JDAnalysis(
             job_title="Data Analyst Intern", company="",
             hard_skills=["sql", "excel"], soft_skills=[],
@@ -385,7 +387,7 @@ def test_required_terms_outrank_inferred_ones_when_shortlisting(
         )
 
     def tailor(*, analysis, vault_context, student_name, student_email,
-               qualifications_block=""):
+               qualifications_block="", api_key=None):
         seen["vault_context"] = vault_context
         return RESUME
 

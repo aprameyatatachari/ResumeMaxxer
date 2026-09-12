@@ -16,6 +16,7 @@ repos 1, 2, 4 and 5 still land. A titled-but-empty Project is never committed.
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -24,6 +25,7 @@ import ai_service
 import github_service
 from auth import get_current_user
 from database import get_session
+from gemini_key import get_student_api_key
 from models import Bullet, EntityType, Project, User
 from schemas import (
     BulletRead,
@@ -47,13 +49,24 @@ router = APIRouter()
 # Shared import routine
 # ---------------------------------------------------------------------------
 def _import_one(
-    *, repo_url: str, current_user: User, session: Session
+    *,
+    repo_url: str,
+    current_user: User,
+    session: Session,
+    api_key: Optional[str] = None,
 ) -> GitHubImportResponse:
     """Fetch, summarise and persist a single repository.
 
     Raises `github_service.GitHubServiceError` for anything the student can fix
     (bad URL, private repo, rate limit) and `ai_service.AIServiceError` when
     Gemini fails. Callers map those to status codes or per-repo failures.
+
+    `api_key` is the student's own Gemini key when they have one. Importing is
+    NOT charged against the free tailoring allowance - a student has to build a
+    vault before tailoring is worth anything, and gating the first step behind
+    a quota would mean a new user hits a wall before seeing the app work. But
+    the key is still honoured when present, so a student who has added one
+    never touches the app's key anywhere.
     """
     repo = github_service.fetch_repo_data(repo_url)
 
@@ -76,6 +89,7 @@ def _import_one(
         readme=repo.readme,
         languages=repo.languages,
         description=repo.description,
+        api_key=api_key,
     )
 
     project = Project(
@@ -192,6 +206,7 @@ def import_batch(
     payload: GitHubBatchImportRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
+    student_api_key: Optional[str] = Depends(get_student_api_key),
 ) -> GitHubBatchImportResponse:
     """Import every ticked repo, reporting per-repo success and failure.
 
@@ -212,7 +227,10 @@ def import_batch(
         try:
             imported.append(
                 _import_one(
-                    repo_url=repo_url, current_user=current_user, session=session
+                    repo_url=repo_url,
+                    current_user=current_user,
+                    session=session,
+                    api_key=student_api_key,
                 )
             )
         except github_service.GitHubServiceError as exc:
@@ -257,6 +275,7 @@ def import_repository(
     payload: GitHubImportRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
+    student_api_key: Optional[str] = Depends(get_student_api_key),
 ) -> GitHubImportResponse:
     """Import a repo the username listing cannot reach - someone else's repo
     that the student contributed to, for instance.
@@ -267,9 +286,17 @@ def import_repository(
     """
     try:
         return _import_one(
-            repo_url=payload.repo_url, current_user=current_user, session=session
+            repo_url=payload.repo_url,
+            current_user=current_user,
+            session=session,
+            api_key=student_api_key,
         )
     except github_service.GitHubServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    except ai_service.InvalidApiKeyError as exc:
+        # The student's key is wrong - theirs to fix, so 400 not 502.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc

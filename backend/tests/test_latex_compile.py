@@ -31,7 +31,7 @@ from schemas import (
 def _service_is_up() -> bool:
     try:
         return (
-            httpx.get(f"{latex_renderer.LATEX_API_URL}/docs", timeout=3.0).status_code
+            httpx.get(f"{latex_renderer.api_url()}/docs", timeout=3.0).status_code
             == 200
         )
     except Exception:
@@ -40,7 +40,7 @@ def _service_is_up() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _service_is_up(),
-    reason=f"LaTeX service not reachable at {latex_renderer.LATEX_API_URL} "
+    reason=f"LaTeX service not reachable at {latex_renderer.api_url()} "
     "(start it with `docker compose up -d`)",
 )
 

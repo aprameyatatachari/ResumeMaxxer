@@ -1,0 +1,72 @@
+# ===========================================================================
+#  ResumeMaxxer - LaTeX compiler, built for Vercel
+#
+#  Vercel builds this file into an OCI image and runs it as a Function (see
+#  `vercel.json` -> services.latex). It is NOT routed publicly: the only way in
+#  is the service binding declared by the `api` service, which injects this
+#  container's internal URL as LATEX_API_URL.
+#
+#  Locally, `docker-compose.yml` runs the upstream image directly instead. This
+#  file exists only because the hosted environment has one constraint compose
+#  does not.
+#
+#  The cold-start problem
+#  ----------------------
+#  Tectonic downloads the TeX packages a document needs on first use. Compose
+#  keeps them in a named volume, which is why a local compile is ~1.3s after
+#  the first one. A Vercel Function has no persistent volume and scales to zero
+#  after five minutes idle, so every cold start would re-download the tree -
+#  roughly 110 seconds, paid by whichever student happens to be first.
+#
+#  So the cache is warmed here, at build time, and ships inside the image.
+#  `warmup.tex` is a real resume rendered by the real renderer (regenerate it
+#  with `python backend/generate_latex_warmup.py`), so it pulls exactly the
+#  packages a student's resume pulls - not an approximation that would leave
+#  half the tree to download at runtime.
+# ===========================================================================
+
+FROM pranavgnn/latex-pdf:latest
+
+# ---------------------------------------------------------------------------
+#  Warm the package cache
+# ---------------------------------------------------------------------------
+#  Tectonic caches into $HOME/.cache/Tectonic. Both this RUN and the running
+#  service are root, so the cache written here is the cache read at runtime -
+#  that is the whole trick, and it breaks if a USER directive is ever added.
+#
+#  Compiled in /tmp and deleted afterwards: only the cache is wanted in the
+#  layer, not the artefacts. No `|| true` - if the warm-up cannot compile, the
+#  renderer cannot either, and the build should say so now rather than ship an
+#  image that fails on the first real request.
+COPY warmup.tex /tmp/warmup/warmup.tex
+RUN cd /tmp/warmup \
+    && tectonic warmup.tex \
+    && test -f warmup.pdf \
+    && cd / \
+    && rm -rf /tmp/warmup
+
+# ---------------------------------------------------------------------------
+#  Port
+# ---------------------------------------------------------------------------
+#  Vercel probes port 80 unless the PORT environment variable says otherwise,
+#  and sets PORT in the container.
+#
+#  Upstream reads `process.env.Port` - capital P, lowercase rest (see
+#  src/index.ts in pranavgnn/latex-pdf). Environment variables are
+#  case-sensitive on Linux, so PORT alone would be ignored and the service
+#  would sit on its 3000 default while Vercel waited on 80. Both spellings are
+#  pinned to the same value so it cannot matter which one anything reads.
+#
+#  `PORT=3000` must ALSO be set in the Vercel project settings - that is what
+#  tells the platform which port to route to. This ENV only settles the
+#  container's own view.
+ENV Port=3000
+ENV PORT=3000
+
+# The service writes each request's .tex/.pdf pair into ./temp relative to its
+# workdir and creates it on demand. Pre-creating it means a request never
+# depends on mkdir succeeding against whatever the runtime's overlay allows.
+WORKDIR /app
+RUN mkdir -p /app/temp
+
+EXPOSE 3000

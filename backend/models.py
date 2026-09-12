@@ -206,6 +206,24 @@ class User(SQLModel, table=True):
     github_url: str = Field(default="", max_length=512)
     portfolio_url: str = Field(default="", max_length=512)
 
+    # --- Free tailoring quota --------------------------------------------
+    # Gemini calls cost money, so a student gets a few tailoring runs a week on
+    # the app's own API key and then supplies their own (see `quota.py` and
+    # `routers/tailor.py`).
+    #
+    # Two columns, not a usage-event table. A weekly count that resets is all
+    # the product needs, and a row per run would need pruning forever to answer
+    # a question this answers in one read of the user row we have already
+    # loaded for auth.
+    #
+    # `free_runs_week` is the Monday of the week the count belongs to. A NULL
+    # means "never tailored", and a value older than the current week means the
+    # count is stale and reads as zero - so the reset costs no scheduled job,
+    # no cron and no background worker. There is nothing to go wrong at
+    # midnight on Monday because nothing happens at midnight on Monday.
+    free_runs_used: int = Field(default=0)
+    free_runs_week: Optional[date] = Field(default=None)
+
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),

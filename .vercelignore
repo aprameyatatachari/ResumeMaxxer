@@ -1,0 +1,48 @@
+# Files Vercel must never upload or bundle into a function.
+#
+# Git-based deploys already skip everything in .gitignore, so this matters for
+# two cases: `vercel dev` / `vercel deploy` from a laptop, which upload the
+# working directory as it actually is, and anything that slipped past
+# .gitignore.
+#
+# The Python bundle limit is 500 MB uncompressed. A clean install of
+# backend/requirements.txt is ~95 MB, but a developer's backend/.venv
+# accumulates far more than that over a project's life - measured at 263 MB on
+# one machine, most of it packages no longer in requirements.txt. There is no
+# tree-shaking for Python, so anything reachable at build time gets bundled.
+
+# --- Python ---------------------------------------------------------------
+backend/.venv/
+backend/venv/
+backend/tests/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+**/__pycache__/
+**/*.pyc
+
+# Development-only: drops and recreates every table. Must not be reachable
+# from a deployed function.
+backend/dev_reset_db.py
+
+# --- Node -----------------------------------------------------------------
+**/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# --- Tests and tooling not needed to build or run -------------------------
+e2e/
+.github/
+
+# --- Local development only -----------------------------------------------
+docker-compose.yml
+start.bat
+stop.bat
+.claude/
+
+# --- Docs -----------------------------------------------------------------
+*.md
+!latex/*.md
+product.md
+prompt.txt
+resume-template.tex

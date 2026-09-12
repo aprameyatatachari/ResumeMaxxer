@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError, createApiClient } from './api'
+import { clearGeminiKey, setGeminiKey } from './gemini-key'
 
 /**
  * The API client's error handling and request shaping.
@@ -26,6 +27,76 @@ function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown>
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  clearGeminiKey()
+})
+
+describe("the student's own Gemini key", () => {
+  const STUDENT_KEY = 'AIzaSyExampleKeyThatIsLongEnough00000000'
+
+  it('is sent as a header when one is saved', async () => {
+    setGeminiKey(STUDENT_KEY)
+    const fetchMock = mockFetch({ json: async () => ({}) })
+
+    await createApiClient(token).getVault()
+
+    // Must match backend/gemini_key.py::HEADER_NAME.
+    expect(fetchMock.mock.calls[0][1].headers['X-Gemini-Api-Key']).toBe(
+      STUDENT_KEY,
+    )
+  })
+
+  it('is omitted entirely when none is saved', async () => {
+    const fetchMock = mockFetch({ json: async () => ({}) })
+
+    await createApiClient(token).getVault()
+
+    expect(
+      fetchMock.mock.calls[0][1].headers['X-Gemini-Api-Key'],
+    ).toBeUndefined()
+  })
+
+  it('rides along on the multipart upload too', async () => {
+    // The tailoring endpoint is the one that actually needs it, and it is the
+    // only multipart request in the app - a header dropped here would mean
+    // BYOK silently never worked.
+    setGeminiKey(STUDENT_KEY)
+    const fetchMock = mockFetch({ json: async () => ({ resume_id: 1 }) })
+    const file = new File([new Uint8Array([1])], 'jd.pdf', {
+      type: 'application/pdf',
+    })
+
+    await createApiClient(token).tailor(file)
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers['X-Gemini-Api-Key']).toBe(STUDENT_KEY)
+    // And still no hand-set Content-Type, or the boundary is lost.
+    expect(init.headers['Content-Type']).toBeUndefined()
+  })
+
+  it('is picked up on a key saved after the client was built', async () => {
+    // `useApi()` memoises one client for the whole session, so a key read once
+    // at construction time would never be seen until a page reload.
+    const client = createApiClient(token)
+    setGeminiKey(STUDENT_KEY)
+    const fetchMock = mockFetch({ json: async () => ({}) })
+
+    await client.getVault()
+
+    expect(fetchMock.mock.calls[0][1].headers['X-Gemini-Api-Key']).toBe(
+      STUDENT_KEY,
+    )
+  })
+
+  it('is sent on PDF requests as well', async () => {
+    setGeminiKey(STUDENT_KEY)
+    const fetchMock = mockFetch({ blob: async () => new Blob(['%PDF-']) })
+
+    await createApiClient(token).downloadStoredPdf(7)
+
+    expect(fetchMock.mock.calls[0][1].headers['X-Gemini-Api-Key']).toBe(
+      STUDENT_KEY,
+    )
+  })
 })
 
 describe('auth header', () => {

@@ -44,7 +44,9 @@ class FakeClient:
 def gemini_fixture(monkeypatch):
     def install(response):
         client = FakeClient(response)
-        monkeypatch.setattr(ai_service, "_get_client", lambda: client)
+        # `_get_client` now takes the student's own API key (or None for the
+        # app's), so the stand-in has to accept it and ignore it.
+        monkeypatch.setattr(ai_service, "_get_client", lambda api_key=None: client)
         return client
 
     return install
@@ -108,11 +110,64 @@ def test_sdk_exceptions_are_wrapped(gemini):
 
 
 def test_missing_api_key_is_a_clear_error(monkeypatch):
+    """With no app key configured, the free allowance cannot run - and the
+    message has to point the student at the way out, which is their own key."""
     monkeypatch.setattr(ai_service, "_client", None)
     monkeypatch.setattr(ai_service, "GEMINI_API_KEY", "")
     with pytest.raises(ai_service.AIServiceError) as exc:
         ai_service._get_client()
-    assert "GEMINI_API_KEY is not set" in str(exc.value)
+    assert "own Gemini API key" in str(exc.value)
+
+
+def test_a_student_key_bypasses_the_apps_client_entirely(monkeypatch):
+    """A student's own key must be used even when the app has no key at all -
+    that is the whole point of bring-your-own-key."""
+    built = {}
+
+    class FakeGenaiClient:
+        def __init__(self, api_key):
+            built["api_key"] = api_key
+
+    monkeypatch.setattr(ai_service, "_client", None)
+    monkeypatch.setattr(ai_service, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(ai_service.genai, "Client", FakeGenaiClient)
+
+    ai_service._get_client("AIzaSTUDENTKEY0000000000000000000000000")
+
+    assert built["api_key"] == "AIzaSTUDENTKEY0000000000000000000000000"
+    # Never cached: a process-wide cache keyed on the key would hold other
+    # people's credentials in memory for the life of the instance.
+    assert ai_service._client is None
+
+
+def test_a_rejected_key_is_a_typed_error_and_never_echoes_the_key(monkeypatch):
+    """A bad key needs different handling from a broken service, and the key
+    itself must not reach a log line or an error message."""
+    secret = "AIzaSECRETKEY000000000000000000000000000"
+
+    class ExplodingClient:
+        class models:
+            @staticmethod
+            def generate_content(**_kwargs):
+                raise RuntimeError(
+                    f"400 INVALID_ARGUMENT: API key not valid: {secret}"
+                )
+
+    monkeypatch.setattr(ai_service, "_get_client", lambda api_key=None: ExplodingClient())
+
+    with pytest.raises(ai_service.InvalidApiKeyError) as exc:
+        ai_service.analyse_job_description("We need Python.", api_key=secret)
+
+    message = str(exc.value)
+    assert secret not in message
+    assert "rejected that API key" in message
+
+
+def test_the_redactor_removes_keys_but_leaves_short_strings_alone():
+    secret = "AIzaSECRETKEY000000000000000000000000000"
+    assert secret not in ai_service._redact(f"failed for {secret}", secret)
+    # Guard against a short or empty "secret" blanking out unrelated text.
+    assert ai_service._redact("a b c", "", "ab") == "a b c"
 
 
 def test_repo_bullets_are_stripped_of_invented_metrics(gemini):

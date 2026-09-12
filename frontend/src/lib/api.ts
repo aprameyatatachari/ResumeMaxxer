@@ -23,6 +23,7 @@ import type {
   GitHubRepoListResponse,
   Project,
   ProjectInput,
+  QuotaStatus,
   ResumePayload,
   TailorResponse,
   User,
@@ -30,10 +31,53 @@ import type {
   Vault,
 } from './types'
 
+import { getGeminiKey } from './gemini-key'
+
+/**
+ * Where the API lives.
+ *
+ * An EMPTY value means same-origin, and that is how the deployed app runs: on
+ * Vercel the frontend, the auth service and this API are three services behind
+ * one domain, so `/api/vault` is simply a relative path. That is not only
+ * tidier - it is what makes the Better Auth session cookie a first-party
+ * cookie instead of a cross-site one, and it removes CORS from the picture
+ * entirely.
+ *
+ * Locally the three run on separate ports, so the fallback is absolute.
+ */
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+/** Human-readable origin, for error messages. `API_BASE` is empty when we are
+ *  talking to our own origin, and "Could not reach the API at " reads as a
+ *  bug. */
+const API_LABEL = API_BASE || window.location.origin
 
 /** Fetches a valid JWT for the current session, or null when signed out. */
 export type TokenGetter = () => Promise<string | null>
+
+/**
+ * The header carrying a student's own Gemini key.
+ *
+ * Must match `backend/gemini_key.py::HEADER_NAME`, and must be listed in the
+ * backend's CORS `allow_headers` or the browser preflight rejects it.
+ */
+const GEMINI_KEY_HEADER = 'X-Gemini-Api-Key'
+
+/**
+ * Attach the student's own key, when they have saved one.
+ *
+ * Read per request rather than captured once when the client is built: the
+ * client is memoised for the whole session by `useApi()`, so a key saved after
+ * mount would otherwise never be picked up until a reload.
+ *
+ * A header rather than a query parameter or body field, so it survives the
+ * multipart upload, works uniformly on every endpoint, and never lands in a
+ * URL - and therefore never in a server log or the browser's history.
+ */
+function keyHeader(): Record<string, string> {
+  const key = getGeminiKey()
+  return key ? { [GEMINI_KEY_HEADER]: key } : {}
+}
 
 /**
  * An API error carrying the HTTP status, so callers can branch on it.
@@ -71,6 +115,7 @@ async function request<T>(
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...keyHeader(),
         ...init.headers,
       },
     })
@@ -79,7 +124,7 @@ async function request<T>(
     // FastAPI server is not running", so say that rather than "Failed to fetch".
     throw new ApiError(
       0,
-      `Could not reach the API at ${API_BASE}. Is the backend running?`,
+      `Could not reach the API at ${API_LABEL}. Is the backend running?`,
     )
   }
 
@@ -116,13 +161,14 @@ async function requestBlob(
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...keyHeader(),
         ...init.headers,
       },
     })
   } catch {
     throw new ApiError(
       0,
-      `Could not reach the API at ${API_BASE}. Is the backend running?`,
+      `Could not reach the API at ${API_LABEL}. Is the backend running?`,
     )
   }
 
@@ -262,6 +308,8 @@ export function createApiClient(getToken: TokenGetter) {
         method: 'PATCH',
         ...json(resume),
       }),
+    /** Free runs left this week. A pure read - never consumes anything. */
+    getQuota: () => request<QuotaStatus>(getToken, '/api/tailor/quota'),
     getHistory: () =>
       request<GeneratedResumeSummary[]>(getToken, '/api/tailor/history'),
     getGeneratedResume: (id: number) =>

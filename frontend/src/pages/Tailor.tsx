@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
+import ApiKeyDialog from '../components/ApiKeyDialog'
 import ResumePreview from '../components/ResumePreview'
 import { useApi } from '../hooks/useApi'
 import { ApiError } from '../lib/api'
-import type { ResumePayload, TailorResponse } from '../lib/types'
+import { hasGeminiKey } from '../lib/gemini-key'
+import type { QuotaStatus, ResumePayload, TailorResponse } from '../lib/types'
 
 const ACCEPTED = '.pdf,.docx,.txt,.md'
-const MAX_BYTES = 5 * 1024 * 1024 // mirrors jd_parser.MAX_UPLOAD_BYTES
+// Mirrors jd_parser.MAX_UPLOAD_BYTES. Both are under Vercel's 4.5 MB request
+// body limit on purpose - a bigger file is rejected by the platform before the
+// API sees it, with an error that tells the student nothing.
+const MAX_BYTES = 4 * 1024 * 1024
 
 /**
  * Staged progress copy.
@@ -32,6 +37,86 @@ function formatSize(bytes: number): string {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** "Monday 14 September", from the ISO date the API returns. */
+function formatResetDate(iso: string): string {
+  const parsed = new Date(`${iso}T00:00:00Z`)
+  if (Number.isNaN(parsed.getTime())) return iso
+  return parsed.toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  })
+}
+
+/**
+ * The free-allowance banner.
+ *
+ * Shown before the student spends a run rather than after, because "you have
+ * one left" changes whether they bother tailoring for a role they are lukewarm
+ * about. Runs on their own key are unmetered, so it says so and stops counting.
+ */
+function QuotaBanner({
+  quota,
+  onAddKey,
+}: {
+  quota: QuotaStatus
+  onAddKey: () => void
+}) {
+  if (quota.using_own_key) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm">
+        <span className="text-emerald-800">
+          Running on your own Gemini key — unlimited tailoring.
+        </span>
+        <button
+          type="button"
+          onClick={onAddKey}
+          className="font-medium text-emerald-700 underline"
+        >
+          Manage key
+        </button>
+      </div>
+    )
+  }
+
+  const out = quota.remaining <= 0
+  return (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5 text-sm ${
+        out
+          ? 'border-amber-200 bg-amber-50'
+          : 'border-slate-200 bg-white'
+      }`}
+    >
+      <span className={out ? 'text-amber-900' : 'text-slate-600'}>
+        {out ? (
+          <>
+            You have used all {quota.limit} free tailoring runs this week. They
+            reset on {formatResetDate(quota.resets_on)}.
+          </>
+        ) : (
+          <>
+            <strong className="text-slate-900">
+              {quota.remaining} of {quota.limit}
+            </strong>{' '}
+            free tailoring runs left this week.
+          </>
+        )}
+      </span>
+      <button
+        type="button"
+        onClick={onAddKey}
+        className={`font-medium underline ${
+          out ? 'text-amber-900' : 'text-brand-600'
+        }`}
+      >
+        {out ? 'Add your own key to carry on' : 'Use your own key instead'}
+      </button>
+    </div>
+  )
+}
+
 export default function Tailor() {
   const api = useApi()
   const [file, setFile] = useState<File | null>(null)
@@ -45,7 +130,27 @@ export default function Tailor() {
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [quota, setQuota] = useState<QuotaStatus | null>(null)
+  const [keyDialogOpen, setKeyDialogOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Load the allowance.
+   *
+   * Deliberately silent on failure: the counter is useful context, not
+   * something worth showing an error for. A student who cannot see it can
+   * still tailor, and the real enforcement is server-side anyway.
+   */
+  const refreshQuota = useCallback(() => {
+    api
+      .getQuota()
+      .then(setQuota)
+      .catch(() => setQuota(null))
+  }, [api])
+
+  useEffect(() => {
+    refreshQuota()
+  }, [refreshQuota])
 
   // Advance the progress label while a request is in flight.
   useEffect(() => {
@@ -61,7 +166,7 @@ export default function Tailor() {
   }, [busy])
 
   /** Validate client-side too, so an obviously wrong file fails instantly
-   *  instead of after a 5 MB upload. The server re-checks regardless. */
+   *  instead of after a 4 MB upload. The server re-checks regardless. */
   function accept(candidate: File | undefined) {
     if (!candidate) return
     setError(null)
@@ -76,7 +181,7 @@ export default function Tailor() {
       return
     }
     if (candidate.size > MAX_BYTES) {
-      setError(`That file is ${formatSize(candidate.size)}. The limit is 5 MB.`)
+      setError(`That file is ${formatSize(candidate.size)}. The limit is 4 MB.`)
       return
     }
     setFile(candidate)
@@ -95,10 +200,20 @@ export default function Tailor() {
       const response = await api.tailor(file, jobTitle.trim() || undefined)
       setResult(response)
       setEdited(response.resume)
+      // The run reports the allowance it just spent, so the banner updates
+      // without a second request.
+      setQuota(response.quota)
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'Something went wrong. Try again.',
       )
+      if (err instanceof ApiError && err.status === 429) {
+        // Out of free runs. The way forward is their own key, so open the
+        // dialog rather than leaving them to find the link - they are mid-task
+        // and the message alone is a dead end.
+        refreshQuota()
+        if (!hasGeminiKey()) setKeyDialogOpen(true)
+      }
     } finally {
       setBusy(false)
     }
@@ -115,6 +230,21 @@ export default function Tailor() {
           The text is read out of the file automatically.
         </p>
       </header>
+
+      {quota && (
+        <QuotaBanner quota={quota} onAddKey={() => setKeyDialogOpen(true)} />
+      )}
+
+      {/* Mounted only while open, so each opening starts from clean state
+          without an effect to reset it. */}
+      {keyDialogOpen && (
+        <ApiKeyDialog
+          onClose={() => setKeyDialogOpen(false)}
+          // Adding or removing a key changes what the counters mean, so re-read
+          // rather than guessing at the new state.
+          onSaved={refreshQuota}
+        />
+      )}
 
       <form onSubmit={submit} className="card space-y-4">
         {/* --- Drop zone --------------------------------------------------
@@ -159,7 +289,7 @@ export default function Tailor() {
                   Drop the JD here, or click to browse
                 </span>
                 <span className="mt-1 text-xs text-slate-500">
-                  PDF, DOCX, TXT or MD · up to 5 MB
+                  PDF, DOCX, TXT or MD · up to 4 MB
                 </span>
               </>
             )}
