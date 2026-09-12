@@ -200,9 +200,15 @@ jobs:
         working-directory: auth-server
         run: npm run migrate
 
+      # The same script a deploy runs, rather than a bare `create_all`. Two
+      # reasons: it is the only place `migrate.py` gets exercised, and that
+      # script is what stands between a model change and a production outage -
+      # `create_all` alone does not add a column to a table that already
+      # exists, which has broken this app twice. A regression in it should fail
+      # here rather than on the deploy that needs it.
       - name: Create API tables
         working-directory: backend
-        run: python -c "from database import init_db; init_db()"
+        run: python migrate.py
 
       # --- Start the stack -------------------------------------------------
       # Logs go to files rather than step output: a backgrounded process
