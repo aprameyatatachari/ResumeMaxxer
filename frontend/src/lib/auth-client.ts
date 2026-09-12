@@ -3,16 +3,28 @@ import { createAuthClient } from 'better-auth/react'
 /**
  * Better Auth client, pointed at the auth service (`auth-server/`).
  *
- * The session lives in a cookie set by that service, so every call must send
- * credentials - it is a different origin from the Vite app.
+ * Two deployment shapes, one variable:
+ *
+ *   local       three ports. The auth service is a DIFFERENT origin from the
+ *               Vite app, so the session cookie is cross-site and every call
+ *               has to send credentials explicitly.
+ *   deployed    one domain. `/api/auth/*` is rewritten to the auth service by
+ *               `vercel.json`, so the cookie is first-party and none of the
+ *               cross-origin rules apply.
+ *
+ * An empty `VITE_AUTH_URL` selects the second shape. It resolves to the
+ * current origin rather than staying empty because Better Auth builds absolute
+ * request URLs from `baseURL`.
  */
-export const AUTH_URL = import.meta.env.VITE_AUTH_URL ?? 'http://localhost:3000'
+const CONFIGURED_AUTH_URL = import.meta.env.VITE_AUTH_URL ?? 'http://localhost:3000'
+
+export const AUTH_URL = CONFIGURED_AUTH_URL || window.location.origin
 
 export const authClient = createAuthClient({
   baseURL: AUTH_URL,
   fetchOptions: {
-    // Required: the session cookie is cross-origin. The auth service allows
-    // this origin explicitly (see its CORS middleware and `trustedOrigins`).
+    // Harmless and correct in both shapes: required when the auth service is a
+    // separate origin, a no-op when it is our own.
     credentials: 'include',
   },
 })

@@ -60,9 +60,49 @@ logger = logging.getLogger("resumemaxxer.auth")
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-# Must match `BETTER_AUTH_URL` in auth-server/.env exactly: Better Auth uses
-# its own base URL as both the `iss` and `aud` claim, and both are checked.
-BETTER_AUTH_URL: str = os.getenv("BETTER_AUTH_URL", "http://localhost:3000").rstrip("/")
+def _resolve_auth_url() -> str:
+    """The auth service's public origin.
+
+    Better Auth uses its own base URL as both the `iss` and the `aud` claim,
+    and this module verifies both, so this MUST resolve to the same string as
+    `resolveBaseUrl()` in `auth-server/src/auth.ts`. The precedence is
+    duplicated there deliberately - the two services are different languages
+    and cannot share the code, so they share the rules instead.
+
+    Keeping them in step is what makes preview deployments work without any
+    configuration: both run in the same Vercel deployment, so both see the same
+    `VERCEL_URL` and agree on the issuer without anyone setting a variable.
+
+        1. BETTER_AUTH_URL                 explicit; what a deployment should set
+        2. VERCEL_PROJECT_PRODUCTION_URL   production deployments only
+        3. VERCEL_URL                      this deployment (previews)
+        4. localhost:3000                  development
+
+    A mismatch does not fail loudly - it fails as a 401 on every single
+    authenticated request, which looks like a broken login rather than a
+    misconfiguration. Hence the paranoia.
+    """
+    explicit = os.getenv("BETTER_AUTH_URL")
+    if explicit:
+        return explicit.rstrip("/")
+
+    # Vercel's variables carry no scheme.
+    if os.getenv("VERCEL_ENV") == "production" and os.getenv(
+        "VERCEL_PROJECT_PRODUCTION_URL"
+    ):
+        return f"https://{os.environ['VERCEL_PROJECT_PRODUCTION_URL']}"
+
+    if os.getenv("VERCEL_URL"):
+        return f"https://{os.environ['VERCEL_URL']}"
+
+    return "http://localhost:3000"
+
+
+BETTER_AUTH_URL: str = _resolve_auth_url()
+
+# On Vercel this is a same-origin call: the backend and the auth service are
+# two services behind one domain, and `/api/auth/jwks` is routed to the auth
+# service by the top-level rewrites in vercel.json.
 JWKS_URL: str = f"{BETTER_AUTH_URL}/api/auth/jwks"
 
 # Ed25519 is Better Auth's default; RS256 is accepted so switching the key type

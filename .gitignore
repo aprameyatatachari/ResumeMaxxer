@@ -6,6 +6,12 @@ prompt.txt
 .env.*
 !.env.example
 
+# Committed on purpose. Vite compiles everything VITE_-prefixed into the public
+# JavaScript bundle, so this file can only ever hold public values - and it
+# holds none: both variables are empty, which is how the deployed app selects
+# same-origin API calls. Read the file's own header before changing it.
+!frontend/.env.production
+
 # --- Python / backend ---
 __pycache__/
 *.py[cod]

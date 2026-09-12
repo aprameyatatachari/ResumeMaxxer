@@ -8,7 +8,10 @@ import { ApiError } from '../lib/api'
 import type { ResumePayload, TailorResponse } from '../lib/types'
 
 const ACCEPTED = '.pdf,.docx,.txt,.md'
-const MAX_BYTES = 5 * 1024 * 1024 // mirrors jd_parser.MAX_UPLOAD_BYTES
+// Mirrors jd_parser.MAX_UPLOAD_BYTES. Both are under Vercel's 4.5 MB request
+// body limit on purpose - a bigger file is rejected by the platform before the
+// API sees it, with an error that tells the student nothing.
+const MAX_BYTES = 4 * 1024 * 1024
 
 /**
  * Staged progress copy.
@@ -61,7 +64,7 @@ export default function Tailor() {
   }, [busy])
 
   /** Validate client-side too, so an obviously wrong file fails instantly
-   *  instead of after a 5 MB upload. The server re-checks regardless. */
+   *  instead of after a 4 MB upload. The server re-checks regardless. */
   function accept(candidate: File | undefined) {
     if (!candidate) return
     setError(null)
@@ -76,7 +79,7 @@ export default function Tailor() {
       return
     }
     if (candidate.size > MAX_BYTES) {
-      setError(`That file is ${formatSize(candidate.size)}. The limit is 5 MB.`)
+      setError(`That file is ${formatSize(candidate.size)}. The limit is 4 MB.`)
       return
     }
     setFile(candidate)
@@ -159,7 +162,7 @@ export default function Tailor() {
                   Drop the JD here, or click to browse
                 </span>
                 <span className="mt-1 text-xs text-slate-500">
-                  PDF, DOCX, TXT or MD · up to 5 MB
+                  PDF, DOCX, TXT or MD · up to 4 MB
                 </span>
               </>
             )}

@@ -30,7 +30,24 @@ import type {
   Vault,
 } from './types'
 
+/**
+ * Where the API lives.
+ *
+ * An EMPTY value means same-origin, and that is how the deployed app runs: on
+ * Vercel the frontend, the auth service and this API are three services behind
+ * one domain, so `/api/vault` is simply a relative path. That is not only
+ * tidier - it is what makes the Better Auth session cookie a first-party
+ * cookie instead of a cross-site one, and it removes CORS from the picture
+ * entirely.
+ *
+ * Locally the three run on separate ports, so the fallback is absolute.
+ */
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+/** Human-readable origin, for error messages. `API_BASE` is empty when we are
+ *  talking to our own origin, and "Could not reach the API at " reads as a
+ *  bug. */
+const API_LABEL = API_BASE || window.location.origin
 
 /** Fetches a valid JWT for the current session, or null when signed out. */
 export type TokenGetter = () => Promise<string | null>
@@ -79,7 +96,7 @@ async function request<T>(
     // FastAPI server is not running", so say that rather than "Failed to fetch".
     throw new ApiError(
       0,
-      `Could not reach the API at ${API_BASE}. Is the backend running?`,
+      `Could not reach the API at ${API_LABEL}. Is the backend running?`,
     )
   }
 
@@ -122,7 +139,7 @@ async function requestBlob(
   } catch {
     throw new ApiError(
       0,
-      `Could not reach the API at ${API_BASE}. Is the backend running?`,
+      `Could not reach the API at ${API_LABEL}. Is the backend running?`,
     )
   }
 

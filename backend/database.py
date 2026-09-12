@@ -21,6 +21,7 @@ and `pool_recycle` (proactively discards connections older than N seconds).
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Generator
 from functools import lru_cache
@@ -44,6 +45,43 @@ DATABASE_URL: str | None = os.getenv("DATABASE_URL")
 # Echo every emitted SQL statement to stdout. Handy while modelling; noisy in
 # production, so it is opt-in via env var.
 SQL_ECHO: bool = os.getenv("SQL_ECHO", "false").lower() in {"1", "true", "yes"}
+
+logger = logging.getLogger("resumemaxxer.database")
+
+# Vercel sets `VERCEL=1` in every build and runtime environment. It is the only
+# signal needed here, and it keeps the pool sizing question out of
+# `ENVIRONMENT`, which gates unrelated things like `create_all` and the docs UI.
+IS_SERVERLESS: bool = bool(os.getenv("VERCEL"))
+
+# --- Pool sizing -----------------------------------------------------------
+# Two very different shapes, hence two sets of defaults.
+#
+# On a long-lived server, one process handles every request, so a pool of 5
+# with burst room is right - connections are opened once and reused for the
+# process's whole life.
+#
+# On Vercel each instance is one of many, and they come and go with traffic.
+# Two limits bite:
+#
+#   * Neon caps total connections. 10 per instance times a few dozen instances
+#     during a placement-season spike exhausts the database, and the failure
+#     mode is every student seeing an error at once.
+#   * A Vercel Function shares 1,024 file descriptors across its concurrent
+#     executions, and every held socket counts against that.
+#
+# So the per-instance pool is deliberately tiny. It is not zero (`NullPool`)
+# because Fluid compute reuses an instance across concurrent requests and keeps
+# it warm - a pool of one saves the TLS handshake on the majority of calls
+# while still letting bursts open a few more. `pool_recycle` is shorter than
+# the default too: Neon idles connections out from its side, and a serverless
+# instance sits idle far more of the time than a server does.
+DEFAULT_POOL_SIZE = 1 if IS_SERVERLESS else 5
+DEFAULT_MAX_OVERFLOW = 4 if IS_SERVERLESS else 5
+DEFAULT_POOL_RECYCLE = 180 if IS_SERVERLESS else 300
+
+POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", DEFAULT_POOL_SIZE))
+MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", DEFAULT_MAX_OVERFLOW))
+POOL_RECYCLE: int = int(os.getenv("DB_POOL_RECYCLE", DEFAULT_POOL_RECYCLE))
 
 
 # ---------------------------------------------------------------------------
@@ -98,15 +136,30 @@ def get_engine() -> Engine:
             "and paste your NeonDB connection string into it."
         )
 
+    url = _normalise_database_url(DATABASE_URL)
+
+    # Neon offers a direct endpoint and a pooled one (PgBouncer, host contains
+    # "-pooler"). On a handful of long-lived processes either works; with
+    # serverless instances coming and going, the direct endpoint runs out of
+    # connections. This is the single most likely deployment misconfiguration,
+    # and it fails under load rather than on the first request, so say so
+    # loudly at startup instead of leaving it to be discovered in production.
+    if IS_SERVERLESS and "-pooler" not in (make_url(url).host or ""):
+        logger.warning(
+            "DATABASE_URL points at Neon's DIRECT endpoint while running "
+            "serverless. Use the pooled connection string (its host contains "
+            "'-pooler') or the database will refuse connections under load."
+        )
+
     return create_engine(
-        _normalise_database_url(DATABASE_URL),
+        url,
         echo=SQL_ECHO,
-        # --- Serverless-friendly pool settings ---------------------------
-        pool_size=5,          # steady-state connections held open
-        max_overflow=5,       # burst capacity above pool_size
-        pool_timeout=30,      # seconds to wait for a free connection
-        pool_recycle=300,     # drop connections older than 5 min (Neon idles out)
-        pool_pre_ping=True,   # cheap SELECT 1 before reuse; kills stale sockets
+        # --- Pool settings (see the constants above for the reasoning) ----
+        pool_size=POOL_SIZE,            # steady-state connections held open
+        max_overflow=MAX_OVERFLOW,      # burst capacity above pool_size
+        pool_timeout=30,                # seconds to wait for a free connection
+        pool_recycle=POOL_RECYCLE,      # Neon idles connections out from its side
+        pool_pre_ping=True,             # cheap SELECT 1 before reuse; kills stale sockets
         # Fail fast instead of hanging if Neon's compute is cold/unreachable.
         connect_args={"connect_timeout": 10},
     )
