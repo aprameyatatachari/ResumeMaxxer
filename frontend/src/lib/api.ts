@@ -23,12 +23,15 @@ import type {
   GitHubRepoListResponse,
   Project,
   ProjectInput,
+  QuotaStatus,
   ResumePayload,
   TailorResponse,
   User,
   UserUpdate,
   Vault,
 } from './types'
+
+import { getGeminiKey } from './gemini-key'
 
 /**
  * Where the API lives.
@@ -51,6 +54,30 @@ const API_LABEL = API_BASE || window.location.origin
 
 /** Fetches a valid JWT for the current session, or null when signed out. */
 export type TokenGetter = () => Promise<string | null>
+
+/**
+ * The header carrying a student's own Gemini key.
+ *
+ * Must match `backend/gemini_key.py::HEADER_NAME`, and must be listed in the
+ * backend's CORS `allow_headers` or the browser preflight rejects it.
+ */
+const GEMINI_KEY_HEADER = 'X-Gemini-Api-Key'
+
+/**
+ * Attach the student's own key, when they have saved one.
+ *
+ * Read per request rather than captured once when the client is built: the
+ * client is memoised for the whole session by `useApi()`, so a key saved after
+ * mount would otherwise never be picked up until a reload.
+ *
+ * A header rather than a query parameter or body field, so it survives the
+ * multipart upload, works uniformly on every endpoint, and never lands in a
+ * URL - and therefore never in a server log or the browser's history.
+ */
+function keyHeader(): Record<string, string> {
+  const key = getGeminiKey()
+  return key ? { [GEMINI_KEY_HEADER]: key } : {}
+}
 
 /**
  * An API error carrying the HTTP status, so callers can branch on it.
@@ -88,6 +115,7 @@ async function request<T>(
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...keyHeader(),
         ...init.headers,
       },
     })
@@ -133,6 +161,7 @@ async function requestBlob(
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...keyHeader(),
         ...init.headers,
       },
     })
@@ -279,6 +308,8 @@ export function createApiClient(getToken: TokenGetter) {
         method: 'PATCH',
         ...json(resume),
       }),
+    /** Free runs left this week. A pure read - never consumes anything. */
+    getQuota: () => request<QuotaStatus>(getToken, '/api/tailor/quota'),
     getHistory: () =>
       request<GeneratedResumeSummary[]>(getToken, '/api/tailor/history'),
     getGeneratedResume: (id: number) =>

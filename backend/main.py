@@ -127,7 +127,14 @@ app.add_middleware(
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    # `X-Gemini-Api-Key` carries a student's own Gemini key (see
+    # `gemini_key.py`). It has to be listed explicitly or the browser's
+    # preflight rejects it and every tailoring request from a student who added
+    # a key fails with an opaque CORS error rather than anything actionable.
+    #
+    # Deployed, all three services sit behind one domain and none of this
+    # applies - it is the local three-port setup that needs it.
+    allow_headers=["Authorization", "Content-Type", "X-Gemini-Api-Key"],
     # Lets the browser cache the preflight (OPTIONS) response for 10 minutes.
     max_age=600,
 )

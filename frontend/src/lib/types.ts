@@ -273,12 +273,31 @@ export interface JobDescriptionSource {
   preferred_qualifications: string[]
 }
 
+/**
+ * The free tailoring allowance for the current week.
+ *
+ * Mirrors `backend/schemas.py::QuotaStatus`. Note there is no field for the
+ * key itself - the API reports whether one was used, never its value.
+ */
+export interface QuotaStatus {
+  used: number
+  limit: number
+  remaining: number
+  /** ISO date of the Monday the allowance rolls over on. */
+  resets_on: string
+  /** True when the request ran on the student's own key, in which case the
+   *  counters above are informational and do not constrain anything. */
+  using_own_key: boolean
+}
+
 export interface TailorResponse {
   resume_id: number
   job_title: string
   analysis: JDAnalysis
   resume: ResumePayload
   source: JobDescriptionSource
+  /** Returned with the run so the counter updates without a second request. */
+  quota: QuotaStatus
 }
 
 export interface GeneratedResumeSummary {

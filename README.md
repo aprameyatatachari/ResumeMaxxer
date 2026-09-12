@@ -96,7 +96,18 @@ right call here: the tailoring prompt is extraction and rewriting, not open
 creative work, and it is markedly cheaper and faster than Pro.
 
 > No billing account is needed for the free tier, but it is rate limited. If
-> you see 429s while testing, that is the quota, not a bug.
+> you see 429s from Google while testing, that is their quota, not a bug.
+
+**This key only funds the free allowance.** Each student gets
+`quota.FREE_RUNS_PER_WEEK` (3) tailoring runs a week on it; past that they add
+their own Gemini key in the app and their runs come off their own free tier
+instead. So your spend scales with the number of active students, not with how
+much they use it.
+
+Leaving `GEMINI_API_KEY` empty is a supported configuration: free runs then
+fail with a message telling the student to add their own key, and everything
+else works. See §12 of [ARCHITECTURE.md](ARCHITECTURE.md) for the whole
+model — including why the student's key is never stored on the server.
 
 ### 3. Authentication — self-hosted, nothing to sign up for
 
@@ -205,8 +216,20 @@ the backend's CORS allowlist points at it; if it moves, requests fail preflight.
 
 ### After a schema change
 
-`create_all` never ALTERs an existing table, so a model change needs the
-development database rebuilt:
+`create_all` never ALTERs an existing table, so a model change does not reach
+the database on its own. Apply it:
+
+```bash
+cd backend && python migrate.py
+```
+
+That creates new tables, adds new columns to existing ones, and re-reads the
+schema afterwards to prove every modelled column is really there. It is
+idempotent and non-destructive — safe to run any time, and safe against the
+production database.
+
+It cannot drop, rename or retype a column. For those, or to start from a clean
+slate in development:
 
 ```bash
 cd backend && python dev_reset_db.py
@@ -283,19 +306,25 @@ to that payload, which is how the "edit before downloading" flow works.
 
 ---
 
-## Before deploying
+## Deploying
 
-- [ ] Replace `create_all` with Alembic migrations, and delete
-      `backend/dev_reset_db.py`. `create_all` only ever CREATEs — it will not
-      ALTER a table whose columns changed — and the reset script would destroy
-      real users' vaults. `create_all` is already disabled when
-      `ENVIRONMENT=production`.
-- [ ] Set `CORS_ORIGINS` to your real frontend domain, and `FRONTEND_URL` /
-      `BETTER_AUTH_URL` on the auth service to their real origins.
+**[DEPLOYMENT.md](DEPLOYMENT.md) is the guide** — one Vercel project, four
+services, one domain. It covers the routing, the environment variables, the
+LaTeX cold-start fix and the measured limits.
+
+Still open before a real launch:
+
+- [ ] Run `cd backend && python migrate.py` on every deploy that changes a
+      model. It creates new tables and adds new columns, and verifies the
+      result — but `create_all` alone does not, and skipping this step has
+      broken the app twice. Dropping, renaming or retyping a column still
+      needs Alembic.
+- [ ] Delete `backend/dev_reset_db.py`. It would destroy real users' vaults.
 - [ ] Turn on `requireEmailVerification` in `auth-server/src/auth.ts` and wire
       up an email sender. It is off so the MVP loop stays short.
 - [ ] Generate a fresh `BETTER_AUTH_SECRET` for production — never reuse the
       development one.
 - [ ] Set `ENVIRONMENT=production`, which also hides `/docs` and `/openapi.json`.
-- [ ] Rate-limit `/api/tailor` and `/api/github/import`. Both spend money per
-      call and neither is throttled.
+- [ ] Rate-limit `/api/github/import-batch`. It spends one Gemini call per repo
+      and is not throttled. `/api/tailor` is bounded by the weekly free
+      allowance, so it no longer needs its own limit.

@@ -72,14 +72,15 @@ Measured limits, against the ones that actually bind:
 |---|---|---|
 | Python bundle, uncompressed | 500 MB | ~95 MB for a clean `requirements.txt` |
 | Max function duration (Hobby) | 300 s | LaTeX timeout is 180 s, tailoring ~10 s warm |
-| Request / response body | 4.5 MB | JD upload capped at 5 MB — see the gotcha below |
+| Request / response body | 4.5 MB | JD upload capped at 4 MB |
 | Memory (Hobby) | 2 GB | well under |
 
-> **The 5 MB upload cap exceeds Vercel's 4.5 MB body limit.** A student
-> uploading a JD between 4.5 MB and 5 MB gets a platform-level 413 rather than
-> the app's own friendly message. A job description that big is essentially
-> always a scanned PDF, which cannot be tailored anyway - but the error is
-> unhelpful. Lower `jd_parser.MAX_UPLOAD_BYTES` to 4 MB if it comes up.
+> **Do not raise the upload cap above 4 MB.** Vercel rejects a request body
+> over 4.5 MB before our code runs, with a bare platform 413. The app's own
+> limit sits under that deliberately, so every rejection is ours and carries
+> the message that actually helps - "this looks like a scanned PDF". It was
+> 5 MB before this deployment work, which would have put uploads in the
+> 4.5-5 MB band into the platform's hands.
 
 ---
 
@@ -176,9 +177,10 @@ whatever you typed.
 
 ### 4.5 Pick the region
 
-Default is `iad1` (Virginia). Set it to match your Neon region — if Neon is in
-`ap-south-1` and functions run in `iad1`, every query crosses the planet twice,
-and the tailoring endpoint makes several.
+Default is `iad1` (Virginia). Your Neon instance is in **`ap-southeast-1`
+(Singapore)**, so set the function region to **`sin1`**. Left on the default,
+every query crosses the planet twice, and the tailoring endpoint makes several
+in sequence.
 
 ### 4.6 Create the schema
 
@@ -195,11 +197,19 @@ cd backend && DATABASE_URL="<the production URL>" python migrate.py
 ```
 
 The first creates Better Auth's tables (`user`, `session`, `account`,
-`verification`, `jwks`); the second creates the API's. Both are idempotent.
+`verification`, `jwks`); the second creates the API's tables and adds any
+column the models have gained since the database was last touched. Both are
+idempotent, and `migrate.py` re-reads the schema afterwards to prove every
+modelled column really exists rather than assuming it.
 
-`migrate.py` only ever CREATEs — it cannot ALTER an existing table. Once real
-students have data, adding a column needs Alembic. See "Known gaps" in
-ARCHITECTURE.md.
+**Run `migrate.py` on every deploy that changes a model, not just the first
+one.** `create_all` alone does not add columns to a table that already exists,
+and this project has been broken by that twice — most recently while adding the
+quota columns, where an otherwise clean deploy 500ed every authenticated
+endpoint with `column users.free_runs_used does not exist`. `migrate.py` now
+handles additive column changes; anything destructive (dropping, renaming,
+retyping) it reports and refuses, which is the point at which the project needs
+Alembic. See "Known gaps" in ARCHITECTURE.md.
 
 ### 4.7 Deploy and verify
 

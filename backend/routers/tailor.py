@@ -45,8 +45,10 @@ import ai_service
 import jd_parser
 import jd_qualifications
 import latex_renderer
+import quota
 from auth import get_current_user
 from database import get_session
+from gemini_key import get_student_api_key
 from models import (
     Bullet,
     Education,
@@ -62,6 +64,7 @@ from schemas import (
     GeneratedResumeRead,
     GeneratedResumeSummary,
     JobDescriptionSource,
+    QuotaStatus,
     ResumePayload,
     TailorResponse,
 )
@@ -292,6 +295,61 @@ def _build_vault_context(
 # ---------------------------------------------------------------------------
 # Main endpoint
 # ---------------------------------------------------------------------------
+def _as_quota_status(state: quota.QuotaState) -> QuotaStatus:
+    """Map the domain object onto the wire schema."""
+    return QuotaStatus(
+        used=state.used,
+        limit=state.limit,
+        remaining=state.remaining,
+        resets_on=state.resets_on,
+        using_own_key=state.using_own_key,
+    )
+
+
+def _quota_error(exc: quota.QuotaExceeded) -> HTTPException:
+    """Turn an exhausted allowance into a 429 the frontend can act on.
+
+    429 rather than 402 or 403: this is a rate limit that time will clear, and
+    the status alone tells the frontend to open the "add your own key" dialog
+    instead of showing a dead end. The reset date goes in a header as well as
+    the prose so the UI never has to parse the sentence.
+    """
+    state = exc.state
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=(
+            f"That is all {state.limit} free tailoring runs for this week. "
+            f"Add your own Gemini API key to keep going now - it is free and "
+            f"takes a minute - or come back on "
+            f"{state.resets_on.strftime('%A %d %B')} when these reset."
+        ),
+        headers={
+            "X-Quota-Resets-On": state.resets_on.isoformat(),
+            "X-Quota-Limit": str(state.limit),
+        },
+    )
+
+
+@router.get(
+    "/quota",
+    response_model=QuotaStatus,
+    summary="Free tailoring runs left this week",
+)
+def read_quota(
+    current_user: User = Depends(get_current_user),
+    student_api_key: Optional[str] = Depends(get_student_api_key),
+) -> QuotaStatus:
+    """How many free runs are left, so the UI can say so before they spend one.
+
+    Pure read - calling this never consumes anything. If the request carries
+    the student's own key, `using_own_key` comes back true and the counters are
+    informational only.
+    """
+    return _as_quota_status(
+        quota.peek(current_user, using_own_key=bool(student_api_key))
+    )
+
+
 @router.post("", response_model=TailorResponse, summary="Tailor a resume to a JD file")
 async def tailor_resume(
     file: UploadFile = File(
@@ -302,6 +360,7 @@ async def tailor_resume(
     ),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
+    student_api_key: Optional[str] = Depends(get_student_api_key),
 ) -> TailorResponse:
     """Run the tailoring engine over an uploaded job description.
 
@@ -311,7 +370,21 @@ async def tailor_resume(
 
     This is the slowest endpoint in the app - two sequential Gemini calls, so
     expect several seconds. The frontend must show a real progress state.
+
+    Cost model: the two Gemini calls run on the student's own key when they
+    sent one, and otherwise on the app's key against a small weekly allowance.
     """
+    using_own_key = bool(student_api_key)
+
+    # Checked before anything expensive. A student who is out of free runs gets
+    # told in milliseconds rather than after a 5 MB upload and a file parse -
+    # and, more to the point, before we spend money we have decided not to
+    # spend.
+    try:
+        quota.check(current_user, using_own_key=using_own_key)
+    except quota.QuotaExceeded as exc:
+        raise _quota_error(exc) from exc
+
     # --- Step 0: read and parse the upload --------------------------------
     raw = await file.read()
     try:
@@ -364,8 +437,16 @@ async def tailor_resume(
     # --- Step 1: extract requirements from the JD ------------------------
     try:
         analysis = ai_service.analyse_job_description(
-            jd_text, qualifications_block=qualifications_block
+            jd_text,
+            qualifications_block=qualifications_block,
+            api_key=student_api_key,
         )
+    except ai_service.InvalidApiKeyError as exc:
+        # 400, not 502: the key is wrong, which is the caller's to fix. A 502
+        # would tell the student to wait and retry, and it would never work.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
     except ai_service.AIServiceError as exc:
         logger.error("JD analysis failed: %s", exc)
         raise HTTPException(
@@ -422,7 +503,12 @@ async def tailor_resume(
             student_name=student_name or "Your Name",
             student_email=current_user.email,
             qualifications_block=qualifications_block,
+            api_key=student_api_key,
         )
+    except ai_service.InvalidApiKeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
     except ai_service.AIServiceError as exc:
         logger.error("Resume generation failed: %s", exc)
         raise HTTPException(
@@ -442,6 +528,18 @@ async def tailor_resume(
     session.commit()
     session.refresh(record)
 
+    # --- Step 5: charge the allowance ------------------------------------
+    # Deliberately last. A run that died on a Gemini timeout or a bad parse
+    # must not cost the student anything - with only three a week, losing one
+    # to our failure is a third of their week. Charging after the resume is
+    # safely stored means the only runs that count are the ones that worked.
+    #
+    # The cost of that ordering is the opposite race: two requests started at
+    # once can both pass `quota.check` and both succeed, so a determined
+    # student could get a fourth run. That is a far better failure than
+    # charging for work we did not deliver.
+    quota_state = quota.consume(session, current_user, using_own_key=using_own_key)
+
     logger.info("Generated resume %s for user %s", record.id, current_user.id)
 
     return TailorResponse(
@@ -450,6 +548,7 @@ async def tailor_resume(
         analysis=analysis,
         resume=resume,
         source=source,
+        quota=_as_quota_status(quota_state),
     )
 
 

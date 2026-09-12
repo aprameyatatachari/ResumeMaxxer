@@ -77,25 +77,75 @@ class AIServiceError(RuntimeError):
     """
 
 
+class InvalidApiKeyError(AIServiceError):
+    """Gemini rejected the API key it was given.
+
+    Separate from the base class because the two need different HTTP statuses
+    and completely different copy. When a student has supplied their own key,
+    this means *their* key is wrong and they can fix it in ten seconds - that
+    deserves "check your key", not "the AI service failed", which would send
+    them off to wait and retry forever.
+    """
+
+
 _client: Optional[genai.Client] = None
 _client_lock = threading.Lock()
 
 
-def _get_client() -> genai.Client:
-    """Build the process-wide Gemini client once, lazily (thread-safe).
+def _redact(text: str, *secrets: str) -> str:
+    """Strip API keys out of text that is about to be logged or returned.
+
+    A student's Gemini key arrives on the request and passes through here. SDK
+    exception strings sometimes echo request detail back, and an API key in an
+    application log is a leaked credential - ours or, worse, theirs. Cheap
+    insurance on a path that only runs when something already went wrong.
+    """
+    for secret in secrets:
+        if secret and len(secret) >= 8:
+            text = text.replace(secret, "***redacted***")
+    return text
+
+
+# Substrings Gemini uses when the key itself is the problem, as opposed to the
+# request being malformed or the service being down.
+_BAD_KEY_MARKERS = (
+    "api key not valid",
+    "api_key_invalid",
+    "invalid api key",
+    "permission_denied",
+    "api key expired",
+    "unauthenticated",
+)
+
+
+def _get_client(api_key: Optional[str] = None) -> genai.Client:
+    """A Gemini client for this request.
+
+    Two modes:
+
+    * `api_key` given - the student supplied their own key, so the client is
+      built fresh for this call and thrown away with it. Deliberately NOT
+      cached: a cache keyed on the key would hold other people's credentials in
+      process memory indefinitely, for a saving of a few milliseconds. The
+      client is a thin wrapper over config; building one is cheap.
+
+    * `api_key` omitted - the app's own key, on the free allowance. That client
+      IS shared process-wide, built lazily and once.
 
     Lazy rather than at import time so the app still boots (and `/health` still
-    answers) when the developer has not pasted a Gemini key yet. The client
-    holds a connection pool, so it is built once and shared rather than
-    per-request.
+    answers) when no key is configured at all.
     """
+    if api_key:
+        return genai.Client(api_key=api_key)
+
     global _client
     if _client is not None:
         return _client
 
     if not GEMINI_API_KEY:
         raise AIServiceError(
-            "GEMINI_API_KEY is not set. Add it to backend/.env - see .env.example."
+            "This app's Gemini key is not configured, so free tailoring runs "
+            "are unavailable. Add your own Gemini API key to continue."
         )
 
     with _client_lock:
@@ -114,14 +164,18 @@ def _generate_structured(
     prompt: str,
     schema: Type[T],
     temperature: float = 0.3,
+    api_key: Optional[str] = None,
 ) -> T:
     """Call Gemini and return a validated instance of `schema`.
 
     `temperature` stays low by default: this is an extraction and rewriting
     task, not a creative one. Higher values measurably increase the rate of
     invented detail, which is exactly what the No Fluff rule forbids.
+
+    `api_key`, when given, is the student's own key and is used instead of the
+    app's. It is never logged - see `_redact`.
     """
-    client = _get_client()
+    client = _get_client(api_key)
 
     try:
         response = client.models.generate_content(
@@ -135,8 +189,24 @@ def _generate_structured(
             ),
         )
     except Exception as exc:
-        logger.exception("Gemini request failed")
-        raise AIServiceError(f"Gemini request failed: {exc}") from exc
+        detail = _redact(str(exc), api_key or "", GEMINI_API_KEY)
+        logger.error("Gemini request failed: %s", detail)
+
+        # A rejected key is the student's problem to fix and needs different
+        # copy from "the AI is down", so it is told apart here rather than in
+        # every router.
+        if any(marker in detail.lower() for marker in _BAD_KEY_MARKERS):
+            if api_key:
+                raise InvalidApiKeyError(
+                    "Google rejected that API key. Check you pasted it whole, "
+                    "and that the Generative Language API is enabled for it."
+                ) from exc
+            raise InvalidApiKeyError(
+                "This app's own Gemini key was rejected, so free runs are "
+                "unavailable right now. Add your own key to carry on."
+            ) from exc
+
+        raise AIServiceError(f"Gemini request failed: {detail}") from exc
 
     # Fast path: with `response_schema` set, the SDK parses and validates the
     # response into our Pydantic model itself. `parsed` is None when the model
@@ -271,7 +341,9 @@ You write resume content for college students. Absolute rules:
 # Step 1 - Extract requirements from the job description
 # ---------------------------------------------------------------------------
 def analyse_job_description(
-    jd_text: str, qualifications_block: str = ""
+    jd_text: str,
+    qualifications_block: str = "",
+    api_key: Optional[str] = None,
 ) -> JDAnalysis:
     """Pull structured requirements out of a job description.
 
@@ -330,6 +402,7 @@ FULL JOB DESCRIPTION:
         prompt=prompt,
         schema=JDAnalysis,
         temperature=0.1,  # pure extraction: near-deterministic
+        api_key=api_key,
     )
 
 
@@ -342,6 +415,7 @@ def analyse_repository(
     readme: str,
     languages: list[str],
     description: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> RepoAnalysis:
     """Turn a repo's README plus language stats into tagged resume bullets."""
     system_instruction = _NO_FLUFF_RULES
@@ -374,6 +448,7 @@ README:
         prompt=prompt,
         schema=RepoAnalysis,
         temperature=0.4,
+        api_key=api_key,
     )
 
     # Mechanical guardrail pass over the model's output.
@@ -394,6 +469,7 @@ def tailor_resume(
     student_name: str,
     student_email: str,
     qualifications_block: str = "",
+    api_key: Optional[str] = None,
 ) -> ResumePayload:
     """Produce the final resume payload for @react-pdf/renderer.
 
@@ -504,6 +580,7 @@ Note there is no summary or objective section. Do not invent one.
         prompt=prompt,
         schema=ResumePayload,
         temperature=0.35,
+        api_key=api_key,
     )
 
     # Guardrails: no invented numbers, then hard-trim to one page.

@@ -580,6 +580,31 @@ class ResumePayload(BaseModel):
     )
 
 
+class QuotaStatus(BaseModel):
+    """The student's free tailoring allowance for the current week.
+
+    Gemini costs money per run, so the app funds a few runs a week and a
+    student who wants more adds their own (free) Gemini key. See
+    `backend/quota.py` for the rules.
+
+    Reported alongside every tailoring run as well as on its own endpoint, so
+    the UI can update the counter from the response it already has rather than
+    firing a second request after every run.
+
+    There is deliberately no field carrying the key itself. The API reports
+    *whether* a key was used, never its value - see `backend/gemini_key.py`.
+    """
+
+    used: int
+    limit: int
+    remaining: int
+    # ISO date of the Monday the allowance rolls over on.
+    resets_on: date
+    # True when this request ran on the student's own key, in which case the
+    # counters above did not move and do not constrain anything.
+    using_own_key: bool
+
+
 class TailorResponse(BaseModel):
     """What `POST /api/tailor` returns to React."""
 
@@ -588,3 +613,4 @@ class TailorResponse(BaseModel):
     analysis: JDAnalysis
     resume: ResumePayload
     source: JobDescriptionSource
+    quota: QuotaStatus
