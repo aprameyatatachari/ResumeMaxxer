@@ -166,7 +166,7 @@ without you setting `BETTER_AUTH_URL` by hand.
 | `BETTER_AUTH_URL` | `https://your-domain` | the JWT `iss`/`aud`; both services must agree |
 | `ENVIRONMENT` | `production` | hides `/docs` and skips `create_all` on boot |
 | `GEMINI_API_KEY` | your AI Studio key | funds the free weekly allowance only |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | matches the code default; override only to try another model |
 | `LATEX_API_KEY` | any long random string | must match `API_KEY` on the `latex` service |
 | `PORT` | `3000` | tells Vercel which port the LaTeX container listens on |
 | `GITHUB_TOKEN` | optional fine-grained token, public read | lifts the GitHub API limit from 60/hr to 5,000/hr |

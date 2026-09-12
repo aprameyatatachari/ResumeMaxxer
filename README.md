@@ -91,9 +91,12 @@ The SDK is `google-genai`, Google's current one. (product.md names
 `google-generativeai`; that package is retired and prints a deprecation notice
 on import, so the backend uses the successor instead.)
 
-The default model is `gemini-2.0-flash`, set via `GEMINI_MODEL`. Flash is the
-right call here: the tailoring prompt is extraction and rewriting, not open
-creative work, and it is markedly cheaper and faster than Pro.
+The default model is `gemini-3.1-flash-lite`, set via `GEMINI_MODEL`. Flash
+Lite is the right call here: the tailoring prompt is extraction and rewriting
+against a strict response schema, not open creative work, so the cheapest tier
+that reliably follows a schema is the one to use. It is also the tier a
+student's own free-tier key stretches furthest on, which matters once they are
+paying for their own runs.
 
 > No billing account is needed for the free tier, but it is rate limited. If
 > you see 429s from Google while testing, that is their quota, not a bug.
