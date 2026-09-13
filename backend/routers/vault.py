@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Sequence, Type, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import BaseModel, ValidationError
 from sqlmodel import Session, SQLModel, delete, select
 
 from auth import get_current_user
@@ -79,6 +80,34 @@ def _apply_patch(row: SQLModel, patch: SQLModel) -> SQLModel:
     """
     for field, value in patch.model_dump(exclude_unset=True).items():
         setattr(row, field, value)
+    return row
+
+
+def _merge_validated(row: SQLModel, patch: BaseModel, create_model: type[BaseModel]) -> SQLModel:
+    """Apply a PATCH, but only if the resulting row would pass creation rules.
+
+    A partial body cannot be cross-field validated on its own - "end date
+    before start date" or "a stream on Class X" only show up once the patch is
+    merged with what is stored. So the merge happens first, the whole result
+    is validated as if it were being created, and only then is it written.
+    Otherwise editing could save exactly the combinations adding rejects.
+    """
+    current = {name: getattr(row, name) for name in create_model.model_fields}
+    merged = {**current, **patch.model_dump(exclude_unset=True)}
+    try:
+        validated = create_model(**merged)
+    except ValidationError as exc:
+        # Same shape FastAPI uses for request validation, so the frontend's
+        # error handling needs nothing new.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=[
+                {"loc": list(error["loc"]), "msg": error["msg"].removeprefix("Value error, ")}
+                for error in exc.errors()
+            ],
+        ) from exc
+    for name, value in validated.model_dump().items():
+        setattr(row, name, value)
     return row
 
 
@@ -178,7 +207,7 @@ def update_education(
     session: Session = Depends(get_session),
 ) -> Education:
     row = _owned_or_404(session, Education, education_id, current_user.id)
-    return _commit(session, _apply_patch(row, payload))
+    return _commit(session, _merge_validated(row, payload, EducationCreate))
 
 
 @router.delete("/education/{education_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -227,7 +256,7 @@ def update_experience(
     session: Session = Depends(get_session),
 ) -> Experience:
     row = _owned_or_404(session, Experience, experience_id, current_user.id)
-    return _commit(session, _apply_patch(row, payload))
+    return _commit(session, _merge_validated(row, payload, ExperienceCreate))
 
 
 @router.delete("/experience/{experience_id}", status_code=status.HTTP_204_NO_CONTENT)
