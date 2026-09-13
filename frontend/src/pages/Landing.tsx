@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import AuroraBeam from '../components/landing/AuroraBeam'
 import SiteImage from '../components/SiteImage'
 import { ArrowRight, Check, FileText, Lock } from '../components/icons'
 import { useReveal } from '../hooks/useReveal'
@@ -79,7 +78,7 @@ function useActiveFeature(count: number) {
 
 function HeroProduct() {
   return (
-    <div className="relative mx-auto mt-16 w-full max-w-[980px]" data-reveal style={{ '--reveal-delay': '300ms' } as React.CSSProperties}>
+    <div className="relative mt-10 w-full" data-reveal style={{ '--reveal-delay': '300ms' } as React.CSSProperties}>
       <div className="rounded-[20px] border border-line bg-surface p-2 shadow-[0_6px_25px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-2 border-b border-line px-3 py-2.5 text-xs text-ink-faint">
           <Lock size={13} />
@@ -135,44 +134,58 @@ export default function Landing() {
 
   return (
     <>
-      {/* Hero - always dark: light leaking out of the vault. */}
-      <section className="band-void relative isolate overflow-hidden px-4 pb-24 pt-36 sm:px-6 sm:pt-44">
+      {/* Hero - always dark: the vault door ajar, light spilling out. */}
+      <section className="band-void relative isolate flex min-h-[100svh] items-center overflow-hidden px-4 pb-20 pt-28 sm:px-6">
         <SiteImage
           src="/images/hero-vault.webp"
           eager
-          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-70 [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+          className="hero-image pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-[72%_center]"
         />
-        <AuroraBeam className="pointer-events-none absolute inset-0 -z-10 h-full w-full mix-blend-screen" />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-void"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,#090a0c_0%,rgba(9,10,12,0.92)_30%,rgba(9,10,12,0.35)_60%,transparent_80%)] max-md:bg-[linear-gradient(180deg,rgba(9,10,12,0.55)_0%,rgba(9,10,12,0.9)_60%,#090a0c_100%)]"
           aria-hidden="true"
         />
-        <div className="mx-auto max-w-[1200px] text-center">
-          <h1 className="display mx-auto max-w-[14ch] text-[clamp(2.75rem,8vw,5.25rem)] text-white" data-reveal>
-            Your whole record, locked in one vault.
-          </h1>
-          <p
-            className="mx-auto mt-6 max-w-[52ch] text-base leading-relaxed text-ink-muted sm:text-lg"
-            data-reveal
-            style={{ '--reveal-delay': '120ms' } as React.CSSProperties}
-          >
-            Save your marks, internships, projects and clubs once. Hand over a job
-            description and walk out with a resume cut for that role - rewritten from
-            what you did, never invented.
-          </p>
-          <div
-            className="mt-9 flex flex-wrap justify-center gap-3"
-            data-reveal
-            style={{ '--reveal-delay': '200ms' } as React.CSSProperties}
-          >
-            <Link to={primary.to} className="btn-primary">
-              {primary.label}
-              <ArrowRight size={16} />
-            </Link>
-            <a href="#how" className="btn-secondary">
-              See how it tailors
-            </a>
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-b from-transparent to-void"
+          aria-hidden="true"
+        />
+        <div className="mx-auto w-full max-w-[1200px]">
+          <div className="max-w-[620px]">
+            <h1 className="display text-[clamp(2.75rem,7vw,5.25rem)] text-white" data-reveal>
+              Your whole record, locked in one vault.
+            </h1>
+            <p
+              className="mt-6 max-w-[48ch] text-base leading-relaxed text-ink-muted sm:text-lg"
+              data-reveal
+              style={{ '--reveal-delay': '120ms' } as React.CSSProperties}
+            >
+              Save your marks, internships, projects and clubs once. Hand over a job
+              description and walk out with a resume cut for that role - rewritten from
+              what you did, never invented.
+            </p>
+            <div
+              className="mt-9 flex flex-wrap gap-3"
+              data-reveal
+              style={{ '--reveal-delay': '200ms' } as React.CSSProperties}
+            >
+              <Link to={primary.to} className="btn-primary">
+                {primary.label}
+                <ArrowRight size={16} />
+              </Link>
+              <a href="#how" className="btn-secondary">
+                See how it tailors
+              </a>
+            </div>
           </div>
+        </div>
+      </section>
+
+      {/* What is inside: the product itself. */}
+      <section className="band-void px-4 pb-24 sm:px-6 sm:pb-32">
+        <div className="mx-auto max-w-[1200px]">
+          <h2 className="display-sm max-w-[22ch] text-[clamp(1.75rem,3.5vw,2.5rem)] text-white" data-reveal>
+            Inside: everything you have done, ready to be cut for any role.
+          </h2>
           <HeroProduct />
         </div>
       </section>
@@ -263,7 +276,7 @@ export default function Landing() {
           </div>
           <figure className="glow-ember relative rounded-xl border border-line bg-surface p-3" data-reveal>
             <img
-              src="/images/sample-resume.png"
+              src="/images/sample-resume.webp"
               alt="Example tailored resume for a fictional student, showing education with CGPA and Class XII marks, experience and projects on a single page."
               width={935}
               height={1210}
@@ -304,12 +317,12 @@ export default function Landing() {
       </section>
 
       {/* Final CTA. */}
-      <section className="band-void relative isolate overflow-hidden px-4 py-28 text-center sm:px-6">
+      <section className="band-void relative isolate flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-4 py-28 text-center sm:px-6">
         <SiteImage
           src="/images/cta-vault.webp"
-          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-50"
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-80"
         />
-        <div className="glow-ember pointer-events-none absolute inset-0 -z-10 [&::before]:left-1/2 [&::before]:top-auto [&::before]:-bottom-40 [&::before]:h-[520px] [&::before]:w-[820px] [&::before]:-translate-x-1/2" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_45%_at_center,rgba(9,10,12,0.7),transparent_75%),linear-gradient(180deg,#090a0c_0%,transparent_25%,transparent_75%,#090a0c_100%)]" aria-hidden="true" />
         <h2 className="display mx-auto max-w-[16ch] text-[clamp(2.25rem,6vw,4.25rem)] text-white" data-reveal>
           Open your vault before the next deadline.
         </h2>

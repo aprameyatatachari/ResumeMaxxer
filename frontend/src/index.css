@@ -465,3 +465,15 @@
 @media (prefers-reduced-motion: reduce) {
   .loom-thread, .loom-line { animation: none; }
 }
+
+/* --- Hero image settle ---------------------------------------------------- */
+.hero-image {
+  animation: hero-settle 2400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes hero-settle {
+  from { transform: scale(1.08); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-image { animation: none; }
+}
