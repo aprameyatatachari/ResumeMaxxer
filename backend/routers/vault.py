@@ -22,7 +22,7 @@ from sqlmodel import Session, SQLModel, delete, select
 
 from auth import get_current_user
 from database import get_session
-from models import Bullet, Education, EntityType, Experience, Project, User
+from models import Bullet, Education, EntityType, Experience, ProfileLink, Project, User
 from schemas import (
     BulletCreate,
     BulletRead,
@@ -33,6 +33,10 @@ from schemas import (
     ExperienceCreate,
     ExperienceRead,
     ExperienceUpdate,
+    OrderUpdate,
+    ProfileLinkCreate,
+    ProfileLinkRead,
+    ProfileLinkUpdate,
     ProjectCreate,
     ProjectRead,
     ProjectUpdate,
@@ -69,7 +73,42 @@ def _owned_or_404(
 def _list_owned(
     session: Session, model: Type[TableT], user_id: str
 ) -> Sequence[TableT]:
-    return session.exec(select(model).where(model.user_id == user_id)).all()
+    """Every row of `model` the user owns, in the order the student arranged.
+
+    Tables with a `position` column come back sorted by it, then by id, so rows
+    that predate ordering (all position 0) keep their creation order.
+    """
+    query = select(model).where(model.user_id == user_id)
+    if hasattr(model, "position"):
+        query = query.order_by(model.position, model.id)
+    return session.exec(query).all()
+
+
+def next_position(session: Session, model: Type[TableT], user_id: str) -> int:
+    """Position for a new row: after everything already in the section, so a
+    new entry lands at the bottom where the student can see it and move it."""
+    positions = [row.position for row in _list_owned(session, model, user_id)]
+    return max(positions, default=-1) + 1
+
+
+def _reorder(session: Session, model: Type[TableT], user_id: str, ids: list[int]) -> None:
+    """Apply a complete new order to one section.
+
+    The list must be exactly the student's own rows, each once. Anything else -
+    a missing row, a duplicate, someone else's id - is a 400, not a best
+    effort: a partial order has no single right interpretation, and a foreign
+    id would otherwise reveal whether that row exists.
+    """
+    rows = {row.id: row for row in _list_owned(session, model, user_id)}
+    if len(ids) != len(set(ids)) or set(ids) != set(rows):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The new order must list every entry in this section exactly once.",
+        )
+    for index, row_id in enumerate(ids):
+        rows[row_id].position = index
+        session.add(rows[row_id])
+    session.commit()
 
 
 def _apply_patch(row: SQLModel, patch: SQLModel) -> SQLModel:
@@ -154,6 +193,10 @@ def read_vault(
     """
     return VaultRead(
         user=UserRead.model_validate(current_user, from_attributes=True),
+        links=[
+            ProfileLinkRead.model_validate(link, from_attributes=True)
+            for link in _list_owned(session, ProfileLink, current_user.id)
+        ],
         educations=[
             EducationRead.model_validate(e, from_attributes=True)
             for e in _list_owned(session, Education, current_user.id)
@@ -187,7 +230,11 @@ def create_education(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> Education:
-    row = Education(**payload.model_dump(), user_id=current_user.id)
+    row = Education(
+        **payload.model_dump(),
+        user_id=current_user.id,
+        position=next_position(session, Education, current_user.id),
+    )
     return _commit(session, row)
 
 
@@ -236,7 +283,11 @@ def create_experience(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> Experience:
-    row = Experience(**payload.model_dump(), user_id=current_user.id)
+    row = Experience(
+        **payload.model_dump(),
+        user_id=current_user.id,
+        position=next_position(session, Experience, current_user.id),
+    )
     return _commit(session, row)
 
 
@@ -299,7 +350,8 @@ def create_project(
     # Manual creation always sets is_github_imported=False; the flag is owned
     # by the import flow, not by client input.
     row = Project(
-        **payload.model_dump(), user_id=current_user.id, is_github_imported=False
+        **payload.model_dump(), user_id=current_user.id, is_github_imported=False,
+        position=next_position(session, Project, current_user.id),
     )
     return _commit(session, row)
 
@@ -403,6 +455,97 @@ def delete_bullet(
     session: Session = Depends(get_session),
 ) -> Response:
     row = _owned_or_404(session, Bullet, bullet_id, current_user.id)
+    session.delete(row)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Ordering
+# ---------------------------------------------------------------------------
+# Declared as literal paths ("/education/order"), which FastAPI matches before
+# the "/education/{education_id}" routes only because those are PATCH/DELETE -
+# a PUT to /education/order can never be mistaken for an id.
+@router.put("/education/order", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Set the order of education entries")
+def order_education(
+    payload: OrderUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    _reorder(session, Education, current_user.id, payload.ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/experience/order", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Set the order of experience entries")
+def order_experience(
+    payload: OrderUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    _reorder(session, Experience, current_user.id, payload.ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/project/order", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Set the order of projects")
+def order_projects(
+    payload: OrderUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    _reorder(session, Project, current_user.id, payload.ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Extra profile links
+# ---------------------------------------------------------------------------
+@router.post("/link", response_model=ProfileLinkRead, status_code=status.HTTP_201_CREATED,
+             summary="Add a profile link (LeetCode, Kaggle, a blog...)")
+def create_link(
+    payload: ProfileLinkCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> ProfileLink:
+    row = ProfileLink(
+        **payload.model_dump(),
+        user_id=current_user.id,
+        position=next_position(session, ProfileLink, current_user.id),
+    )
+    return _commit(session, row)
+
+
+@router.put("/link/order", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Set the order of profile links")
+def order_links(
+    payload: OrderUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    _reorder(session, ProfileLink, current_user.id, payload.ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/link/{link_id}", response_model=ProfileLinkRead)
+def update_link(
+    link_id: int,
+    payload: ProfileLinkUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> ProfileLink:
+    row = _owned_or_404(session, ProfileLink, link_id, current_user.id)
+    return _commit(session, _apply_patch(row, payload))
+
+
+@router.delete("/link/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_link(
+    link_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    row = _owned_or_404(session, ProfileLink, link_id, current_user.id)
     session.delete(row)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

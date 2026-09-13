@@ -197,8 +197,16 @@ def _portfolio_link(value: str) -> tuple[str, str]:
 
 
 def _href(display: str, href: str) -> str:
-    """`\\href{...}{\\underline{...}}`, matching the template's contact line."""
-    return f"\\href{{{href}}}{{\\underline{{{escape(display)}}}}}"
+    """`\\href{...}{\\underline{...}}`, matching the template's contact line.
+
+    The URL argument needs its own escaping: `#` and `%` are special inside
+    \\href and must be backslashed, while braces and backslashes cannot be made
+    safe there at all - `schemas.normalise_link_url` rejects them before a
+    student's link is ever stored.
+    """
+    safe_href = href.replace("\\", "").replace("{", "").replace("}", "")
+    safe_href = safe_href.replace("%", "\\%").replace("#", "\\#")
+    return f"\\href{{{safe_href}}}{{\\underline{{{escape(display)}}}}}"
 
 
 def trim_tech_stack(tech_stack: str) -> str:
@@ -353,6 +361,14 @@ def _render_header(payload: ResumePayload) -> str:
     display, href = _portfolio_link(header.portfolio)
     if display:
         parts.append(_href(display, href))
+
+    # Extra links (LeetCode, Kaggle...), in the student's order. The label is
+    # the visible text when given; otherwise the URL without its scheme, which
+    # matches how the fixed links above read.
+    for link in header.links:
+        display, href = _portfolio_link(link.url)
+        if display:
+            parts.append(_href(link.label or display, href))
 
     contact = " $|$\n    ".join(parts)
 

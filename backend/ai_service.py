@@ -537,8 +537,8 @@ Instructions:
    verbatim from the vault. They are pre-formatted; do not reformat,
    recalculate or reword them. Class X / XII rows show a single year of
    passing; a School row covers a whole tenure and lists its board results
-   in `highlights`. Your only decision is which rows to keep. Order most
-   recent first. Drop school-level rows (Class X, Class XII, School) before
+   in `highlights`. Your only decision is which rows to keep - keep them in
+   the order they appear in the vault, which the student chose. Drop school-level rows (Class X, Class XII, School) before
    dropping the degree if space is tight and the student has strong work
    experience.
 
@@ -561,12 +561,14 @@ Instructions:
    and inside each category order by relevance. Only list skills the vault
    actually evidences.
 
-9. HEADER: full_name = "{student_name}", email = "{student_email}". Fill phone,
-   linkedin, github and portfolio ONLY from the vault; use an empty string for
-   anything not there. Write links bare, without a scheme:
-   "github.com/name", not "https://github.com/name".
+9. HEADER: filled in automatically from the student's settings. Set
+   full_name = "{student_name}", every other header field to an empty string,
+   and links to an empty list.
 
-10. `selection_rationale`: one or two sentences, written TO the student,
+10. ORDER: list the experience entries and projects you keep in the order they
+    appear in the vault. The student arranged that order deliberately.
+
+11. `selection_rationale`: one or two sentences, written TO the student,
     explaining why you chose these particular experiences and projects for
     this role. Quote the specific stated qualification each one answers when a
     qualifications section was given. This is shown

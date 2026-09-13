@@ -22,6 +22,8 @@ import type {
   GitHubImportResponse,
   GitHubRepoListResponse,
   Project,
+  ProfileLink,
+  ProfileLinkInput,
   ProjectInput,
   QuotaStatus,
   ResumePayload,
@@ -228,6 +230,9 @@ export function createApiClient(getToken: TokenGetter) {
       }),
     deleteEducation: (id: number) =>
       request<void>(getToken, `/api/vault/education/${id}`, { method: 'DELETE' }),
+    /** Every education id in the new order, first to last. */
+    reorderEducation: (ids: number[]) =>
+      request<void>(getToken, '/api/vault/education/order', { method: 'PUT', ...json({ ids }) }),
 
     createExperience: (data: ExperienceInput) =>
       request<Experience>(getToken, '/api/vault/experience', {
@@ -241,6 +246,8 @@ export function createApiClient(getToken: TokenGetter) {
       }),
     deleteExperience: (id: number) =>
       request<void>(getToken, `/api/vault/experience/${id}`, { method: 'DELETE' }),
+    reorderExperience: (ids: number[]) =>
+      request<void>(getToken, '/api/vault/experience/order', { method: 'PUT', ...json({ ids }) }),
 
     createProject: (data: ProjectInput) =>
       request<Project>(getToken, '/api/vault/project', {
@@ -254,6 +261,18 @@ export function createApiClient(getToken: TokenGetter) {
       }),
     deleteProject: (id: number) =>
       request<void>(getToken, `/api/vault/project/${id}`, { method: 'DELETE' }),
+    reorderProjects: (ids: number[]) =>
+      request<void>(getToken, '/api/vault/project/order', { method: 'PUT', ...json({ ids }) }),
+
+    // --- Extra profile links ----------------------------------------------
+    createLink: (data: ProfileLinkInput) =>
+      request<ProfileLink>(getToken, '/api/vault/link', { method: 'POST', ...json(data) }),
+    updateLink: (id: number, data: Partial<ProfileLinkInput>) =>
+      request<ProfileLink>(getToken, `/api/vault/link/${id}`, { method: 'PATCH', ...json(data) }),
+    deleteLink: (id: number) =>
+      request<void>(getToken, `/api/vault/link/${id}`, { method: 'DELETE' }),
+    reorderLinks: (ids: number[]) =>
+      request<void>(getToken, '/api/vault/link/order', { method: 'PUT', ...json({ ids }) }),
 
     createBullet: (data: BulletInput) =>
       request<Bullet>(getToken, '/api/vault/bullet', { method: 'POST', ...json(data) }),

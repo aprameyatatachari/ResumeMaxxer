@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
@@ -73,18 +75,22 @@ export default function VaultPage() {
         </Alert>
       )}
 
-      <ProfileSection user={vault.user} onChange={reload} />
-      <EducationSection educations={vault.educations} onChange={reload} />
-      <ExperienceSection
-        experiences={vault.experiences}
-        groupedBullets={groupedBullets}
-        onChange={reload}
-      />
-      <ProjectSection
-        projects={vault.projects}
-        groupedBullets={groupedBullets}
-        onChange={reload}
-      />
+      {/* One drag-and-drop context for the page. Each section scopes its
+          own drag type, so entries only ever move within their own list. */}
+      <DndProvider backend={HTML5Backend}>
+        <ProfileSection user={vault.user} links={vault.links} onChange={reload} />
+        <EducationSection educations={vault.educations} onChange={reload} />
+        <ExperienceSection
+          experiences={vault.experiences}
+          groupedBullets={groupedBullets}
+          onChange={reload}
+        />
+        <ProjectSection
+          projects={vault.projects}
+          groupedBullets={groupedBullets}
+          onChange={reload}
+        />
+      </DndProvider>
     </div>
   )
 }

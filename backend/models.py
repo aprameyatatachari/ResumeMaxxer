@@ -211,6 +211,15 @@ class User(SQLModel, table=True):
     github_url: str = Field(default="", max_length=512)
     portfolio_url: str = Field(default="", max_length=512)
 
+    # Which of the fields above appear in the resume header. Stored rather than
+    # inferred from "is it filled in", because a student may want a number on
+    # file for applications but not printed on a resume sent everywhere.
+    include_phone: bool = Field(default=True)
+    include_email: bool = Field(default=True)
+    include_linkedin: bool = Field(default=True)
+    include_github: bool = Field(default=True)
+    include_portfolio: bool = Field(default=True)
+
     # --- Free tailoring quota --------------------------------------------
     # Gemini calls cost money, so a student gets a few tailoring runs a week on
     # the app's own API key and then supplies their own (see `quota.py` and
@@ -254,6 +263,10 @@ class User(SQLModel, table=True):
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     generated_resumes: list["GeneratedResume"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    links: list["ProfileLink"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
@@ -370,6 +383,12 @@ class Education(SQLModel, table=True):
     # purpose - it is only ever read as one blob and shipped to Gemini.
     coursework: str = Field(default="", sa_column=Column(Text, nullable=False))
 
+    # Where this entry sits in its section, as the student arranged it. The
+    # resume uses this order - there is no automatic chronological sort, which
+    # was a guess about what the student wanted. Lower comes first; ties fall
+    # back to id, so rows created before ordering existed keep a stable order.
+    position: int = Field(default=0)
+
     user: Optional[User] = Relationship(back_populates="educations")
 
 
@@ -414,6 +433,12 @@ class Experience(SQLModel, table=True):
         nullable=False,
     )
 
+    # Where this entry sits in its section, as the student arranged it. The
+    # resume uses this order - there is no automatic chronological sort, which
+    # was a guess about what the student wanted. Lower comes first; ties fall
+    # back to id, so rows created before ordering existed keep a stable order.
+    position: int = Field(default=0)
+
     user: Optional[User] = Relationship(back_populates="experiences")
 
 
@@ -449,6 +474,12 @@ class Project(SQLModel, table=True):
     # True when the bullets were AI-generated from the repo README. Lets the UI
     # nudge the student to review machine-written content before exporting.
     is_github_imported: bool = Field(default=False)
+
+    # Where this entry sits in its section, as the student arranged it. The
+    # resume uses this order - there is no automatic chronological sort, which
+    # was a guess about what the student wanted. Lower comes first; ties fall
+    # back to id, so rows created before ordering existed keep a stable order.
+    position: int = Field(default=0)
 
     user: Optional[User] = Relationship(back_populates="projects")
 
@@ -505,6 +536,32 @@ class Bullet(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 # GeneratedResume
 # ---------------------------------------------------------------------------
+class ProfileLink(SQLModel, table=True):
+    """An extra link for the resume header: LeetCode, Codeforces, Kaggle, a blog.
+
+    LinkedIn, GitHub and the portfolio keep their own columns on `User`
+    because they get special formatting (a username becomes a full profile
+    URL). Everything else lives here, in whatever quantity the student wants,
+    each with its own "show on resume" switch and its own place in the order.
+    """
+
+    __tablename__ = "profile_links"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(
+        foreign_key="users.id", ondelete="CASCADE", index=True, max_length=255
+    )
+
+    # Text printed on the resume. Optional: when empty, the URL itself is
+    # shown without its scheme, which is how the fixed links already read.
+    label: str = Field(default="", max_length=60)
+    url: str = Field(max_length=512)
+    include_on_resume: bool = Field(default=True)
+    position: int = Field(default=0)
+
+    user: Optional[User] = Relationship(back_populates="links")
+
+
 class GeneratedResume(SQLModel, table=True):
     """An immutable snapshot of one tailoring run.
 

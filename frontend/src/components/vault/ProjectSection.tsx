@@ -6,6 +6,9 @@ import { ApiError } from '../../lib/api'
 import type { Bullet, Project, ProjectInput } from '../../lib/types'
 import Alert from '../Alert'
 import BulletList from './BulletList'
+import { movedIds } from '../../lib/reorder'
+import MoveButtons from './MoveButtons'
+import SortableCard from './SortableCard'
 import GitHubImportPanel from './GitHubImportPanel'
 
 /** The project form, shared by "add manually" and "edit". */
@@ -148,6 +151,17 @@ export default function ProjectSection({
     }
   }
 
+  /** Save a new order. The list re-renders from the server response, so a
+   *  failed save simply leaves the old order on screen. */
+  async function move(ids: number[]) {
+    try {
+      await api.reorderProjects(ids)
+      onChange()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reorder.')
+    }
+  }
+
   async function remove(id: number) {
     try {
       await api.deleteProject(id)
@@ -237,8 +251,14 @@ export default function ProjectSection({
 
       {/* --- List ---------------------------------------------------------- */}
       <div className="space-y-3">
-        {projects.map((project) => (
-          <div key={project.id} className="card">
+        {projects.map((project, index) => (
+          <SortableCard
+            key={project.id}
+            type="project"
+            index={index}
+            onDrop={(from, to) => void move(movedIds(projects, from, to))}
+            className="card"
+          >
             {editingId === project.id ? (
               <ProjectForm
                 initial={{
@@ -256,26 +276,34 @@ export default function ProjectSection({
               />
             ) : (
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="flex items-center gap-2 font-semibold text-slate-900">
-                  {project.title}
-                  {project.is_github_imported && (
-                    <span className="chip">AI-drafted · review</span>
+              <div className="flex items-start gap-2">
+                <MoveButtons
+                  name={project.title}
+                  index={index}
+                  count={projects.length}
+                  onMove={(from, to) => void move(movedIds(projects, from, to))}
+                />
+                <div>
+                  <h3 className="flex items-center gap-2 font-semibold text-slate-900">
+                    {project.title}
+                    {project.is_github_imported && (
+                      <span className="chip">AI-drafted · review</span>
+                    )}
+                  </h3>
+                  {project.tech_stack && (
+                    <p className="mt-0.5 text-xs text-slate-500">{project.tech_stack}</p>
                   )}
-                </h3>
-                {project.tech_stack && (
-                  <p className="mt-0.5 text-xs text-slate-500">{project.tech_stack}</p>
-                )}
-                {project.repo_url && (
-                  <a
-                    href={project.repo_url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-xs text-brand-600 hover:underline"
-                  >
-                    {project.repo_url}
-                  </a>
-                )}
+                  {project.repo_url && (
+                    <a
+                      href={project.repo_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-xs text-brand-600 hover:underline"
+                    >
+                      {project.repo_url}
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="flex shrink-0 gap-1">
                 <button
@@ -306,7 +334,7 @@ export default function ProjectSection({
               bullets={bulletsFor(groupedBullets, 'PROJECT', project.id)}
               onChange={onChange}
             />
-          </div>
+          </SortableCard>
         ))}
 
         {projects.length === 0 && !manualOpen && (

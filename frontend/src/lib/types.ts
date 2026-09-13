@@ -71,8 +71,25 @@ export interface User {
   linkedin_url: string
   github_url: string
   portfolio_url: string
+  /** Which contact fields appear in the resume header. */
+  include_phone: boolean
+  include_email: boolean
+  include_linkedin: boolean
+  include_github: boolean
+  include_portfolio: boolean
   created_at: string
 }
+
+/** An extra header link: LeetCode, Kaggle, a blog. */
+export interface ProfileLink {
+  id: number
+  /** Text shown on the resume. Empty means the URL is shown. */
+  label: string
+  url: string
+  include_on_resume: boolean
+}
+
+export type ProfileLinkInput = Omit<ProfileLink, 'id'>
 
 export type UserUpdate = Partial<
   Pick<
@@ -84,6 +101,11 @@ export type UserUpdate = Partial<
     | 'linkedin_url'
     | 'github_url'
     | 'portfolio_url'
+    | 'include_phone'
+    | 'include_email'
+    | 'include_linkedin'
+    | 'include_github'
+    | 'include_portfolio'
   >
 >
 
@@ -166,6 +188,7 @@ export interface BulletInput {
 
 export interface Vault {
   user: User
+  links: ProfileLink[]
   educations: Education[]
   experiences: Experience[]
   projects: Project[]
@@ -233,6 +256,9 @@ export interface ResumeHeader {
   linkedin: string
   github: string
   portfolio: string
+  /** Extra links, already filtered to the ones shown. Absent on resumes
+   *  generated before links existed. */
+  links?: { label: string; url: string }[]
 }
 
 export interface ResumeEducation {
