@@ -145,10 +145,10 @@ export default function PdfSandbox() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">
           PDF sandbox
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-ink-muted">
           Development only. Renders the resume template against a worst-case
           fixture so layout changes can be checked against resume-template.tex
           without a live AI call.

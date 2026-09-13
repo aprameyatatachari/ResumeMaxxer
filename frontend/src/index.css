@@ -1,77 +1,500 @@
-/* Tailwind CSS v4: one import replaces the old base/components/utilities
-   triple, and design tokens are declared here instead of in a JS config. */
+/* ==========================================================================
+   ResumeMaxxer - "Aurora vault" system (see DESIGN.md)
+
+   A midnight workspace: obsidian and void canvases, graphite cards with
+   hairline edges, pill controls, and a two-colour story told by one electric
+   iris blue and one ember coral. The aurora beam appears once per page, as
+   light leaking out of the vault. Night is the native mode; day mode flips
+   the content bands to white while the spectacle stays dark.
+   ========================================================================== */
 @import 'tailwindcss';
 
-@theme {
-  /* Brand palette. Slate-and-indigo: reads as a serious tool rather than a
-     toy, and both hues stay legible against printed resume previews. */
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-300: #a5b4fc;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+/* UI: Inter (variable). Display: General Sans, the listed substitute for
+   Esbuild, self-hosted under the ITF Free Font License. */
+@font-face {
+  font-family: 'Inter';
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
 
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* --- Raw palette -------------------------------------------------------- */
+:root {
+  --obsidian: #303236;
+  --void: #090a0c;
+  --charcoal: #111111;
+  --slate-edge: #4a4b50;
+  --iron-veil: #6b6c6d;
+  --smoke: #95979e;
+  --ash: #a9a9aa;
+  --frost: #d1d1d1;
+  --linen: #e5e5e7;
+  --snow: #ffffff;
+  --iris: #5683da;
+  --ember: #ff8964;
+  --molasses: #5a250a;
+}
+
+/* --- Day ---------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-2: #f6f6f6;
+  --surface: #ffffff;
+  --surface-2: #f6f6f6;
+  --ink: #050506;
+  --ink-muted: #303236;
+  --ink-faint: #5d5f64;
+  --line: #d1d1d1;
+  --line-strong: #a9a9aa;
+  --tag-fg-iris: #3a64b8;
+  --focus-ring-solid: #3d6bc9;
+  --tag-fg-ember: #b24a26;
+  --danger: #b3261e;
+  --danger-wash: #fdecea;
+  --success: #1f7a4d;
+  --success-wash: #e6f4ec;
+  --focus-ring: rgb(86 131 218 / 0.35);
+  --elev: 0 4px 6px rgb(0 0 0 / 0.08);
+}
+
+/* --- Night -------------------------------------------------------------- */
+[data-theme='dark'],
+.band-void {
+  color-scheme: dark;
+  --bg: #0b0c0e;
+  --bg-2: #303236;
+  --surface: #111111;
+  --surface-2: #1a1b1e;
+  --ink: #ffffff;
+  --ink-muted: #c2c3c7;
+  --ink-faint: #a0a2a8;
+  --line: #2c2d31;
+  --line-strong: #4a4b50;
+  --tag-fg-iris: #8fb0ef;
+  --focus-ring-solid: #ffffff;
+  --tag-fg-ember: #ffb095;
+  --danger: #ff9b8f;
+  --danger-wash: #2a1412;
+  --success: #7fd6a8;
+  --success-wash: #0f231a;
+  --focus-ring: rgb(255 255 255 / 0.4);
+  --elev: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+
+@theme inline {
+  --color-obsidian: var(--obsidian);
+  --color-void: var(--void);
+  --color-charcoal: var(--charcoal);
+  --color-slate-edge: var(--slate-edge);
+  --color-smoke: var(--smoke);
+  --color-ash: var(--ash);
+  --color-frost: var(--frost);
+  --color-iris: var(--iris);
+  --color-iris-fg: var(--tag-fg-iris);
+  --color-ember: var(--ember);
+  --color-molasses: var(--molasses);
+
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+
+  --font-display: 'General Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-frame: 0 6px 25px rgb(0 0 0 / 0.5);
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.35);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 300ms ease, color 300ms ease;
   }
 
-  /* Visible focus rings for keyboard users. Removing outlines without a
-     replacement makes the app unusable without a mouse. */
+  ::selection {
+    background: rgb(86 131 218 / 0.45);
+    color: #fff;
+  }
+
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand-500;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus-ring-solid);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--iris);
+    width: 1rem;
+    height: 1rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer components {
-  /* Tailwind v4 cannot `@apply` a class that is itself defined in this layer,
-     so the shared button base is expressed as a plain CSS rule and the
-     variants only add colour on top. */
+  /* --- Display type ------------------------------------------------------ */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    text-wrap: balance;
+  }
+  .display-sm {
+    text-wrap: balance;
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  /* --- Buttons: pills ----------------------------------------------------- */
   .btn,
   .btn-primary,
   .btn-secondary,
-  .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2
-           text-sm font-medium transition-colors
-           disabled:cursor-not-allowed disabled:opacity-50;
+  .btn-danger,
+  .btn-white {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.35rem;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease,
+      box-shadow 300ms var(--ease-out-expo),
+      transform 200ms ease;
+  }
+  .btn:active:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled),
+  .btn-danger:active:not(:disabled),
+  .btn-white:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled,
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-danger:disabled,
+  .btn-white:disabled,
+  [aria-disabled='true'].btn-primary,
+  [aria-disabled='true'].btn-secondary {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
 
+  /* The one most important action per screen. */
   .btn-primary {
-    @apply bg-brand-600 text-white hover:bg-brand-700;
+    background: #3d6bc9;
+    color: #fff;
+  }
+  .btn-primary:not(:disabled):hover {
+    background: #355fb5;
+    box-shadow: 0 0 0 1px rgb(86 131 218 / 0.5), 0 8px 28px rgb(86 131 218 / 0.45);
   }
 
   .btn-secondary {
-    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-100;
+    background: transparent;
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+  .btn-secondary:not(:disabled):hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  .btn-white {
+    background: #fff;
+    color: #090a0c;
+  }
+  .btn-white:not(:disabled):hover {
+    background: #e5e5e7;
   }
 
   .btn-danger {
-    @apply text-red-600 hover:bg-red-50;
+    background: transparent;
+    color: var(--danger);
+  }
+  .btn-danger:not(:disabled):hover {
+    background: var(--danger-wash);
   }
 
+  .text-xs.btn-secondary,
+  .text-xs.btn-danger,
+  .text-xs.btn-primary {
+    min-height: 2.25rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8125rem;
+  }
+
+  /* --- Fields: 4px radius, hairline -------------------------------------- */
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
-           placeholder:text-slate-400
-           focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9375rem;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .input::placeholder {
+    color: var(--ink-faint);
+  }
+  .input:hover {
+    border-color: var(--ink-faint);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--focus-ring-solid);
+    box-shadow: 0 0 0 1px var(--focus-ring-solid);
+  }
+  select.input {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2395979e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+  }
+  textarea.input {
+    line-height: 1.5;
   }
 
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-muted);
   }
 
+  /* --- Surfaces ----------------------------------------------------------- */
   .card {
-    @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.5rem;
   }
 
+  /* Tag chip: category colour at 12% behind the full-strength text. */
   .chip {
-    @apply inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5
-           text-xs font-medium text-brand-700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    background: rgb(86 131 218 / 0.12);
+    color: var(--tag-fg-iris);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0;
   }
+  .chip-ember {
+    background: rgb(255 137 100 / 0.14);
+    color: var(--tag-fg-ember);
+  }
+
+  /* A dark spectacle band - stays dark in both themes. */
+  .band-void {
+    background: var(--void);
+    color: #fff;
+    color-scheme: dark;
+  }
+
+  /* Corner glow: warm radial glow bleeding from a card edge. */
+  .glow-ember {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .glow-ember::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 320px;
+    height: 320px;
+    right: -120px;
+    top: -140px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgb(255 170 129 / 0.4), rgb(255 218 159 / 0.12) 45%, transparent 70%);
+    pointer-events: none;
+  }
+  .glow-iris::before {
+    background: radial-gradient(circle, rgb(86 131 218 / 0.45), rgb(86 131 218 / 0.1) 45%, transparent 70%);
+  }
+
+  /* --- Scroll reveal ----------------------------------------------------- */
+  /* Visible by default; hidden-then-revealed only once armed by script. */
+  html.reveal-armed [data-reveal]:not(.is-in) {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(8px);
+  }
+  html.reveal-armed [data-reveal='fade']:not(.is-in) {
+    transform: none;
+  }
+  [data-reveal] {
+    transition:
+      opacity 1000ms var(--ease-out-expo),
+      transform 1000ms var(--ease-out-expo),
+      filter 1000ms var(--ease-out-expo);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+}
+
+/* --- Welcome loader ------------------------------------------------------- */
+/* Shown once after sign-up: the dial ring draws itself, the core lights, the
+   whole overlay fades away. 1.6s total. */
+.welcome-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: var(--bg);
+  animation: welcome-out 1600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.welcome-ring {
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: welcome-draw 800ms cubic-bezier(0.65, 0, 0.35, 1) 100ms forwards;
+}
+.welcome-core {
+  transform-origin: center;
+  transform: scale(0);
+  animation: welcome-pop 500ms cubic-bezier(0.16, 1, 0.3, 1) 700ms forwards;
+}
+.welcome-bar {
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: welcome-bar 1100ms cubic-bezier(0.65, 0, 0.35, 1) 100ms forwards;
+}
+@keyframes welcome-draw { to { stroke-dashoffset: 0; } }
+@keyframes welcome-pop { to { transform: scale(1); } }
+@keyframes welcome-bar { to { transform: scaleX(1); } }
+@keyframes welcome-out {
+  0%, 75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --- Tailoring loom ------------------------------------------------------- */
+.loom-thread {
+  animation: loom-thread 1800ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.loom-line {
+  transform-origin: left center;
+  animation: loom-line 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes loom-thread {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(var(--loom-travel, 220px)); opacity: 0; }
+}
+@keyframes loom-line {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loom-thread, .loom-line { animation: none; }
+}
+
+/* --- Hero image settle ---------------------------------------------------- */
+.hero-image {
+  animation: hero-settle 2400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes hero-settle {
+  from { transform: scale(1.08); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-image { animation: none; }
+}
+
+/* --- Dial text ------------------------------------------------------------ */
+.dial-char {
+  position: relative;
+  display: inline-block;
+}
+.dial-glyph {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+}
+.dial-glyph.is-hidden {
+  visibility: hidden;
+}
+.dial-glyph.is-set {
+  animation: dial-click 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes dial-click {
+  0% { transform: translateY(-0.28em); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
 }

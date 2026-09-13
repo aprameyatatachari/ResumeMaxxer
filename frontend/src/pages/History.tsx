@@ -72,8 +72,8 @@ export default function History() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">History</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">History</h1>
+        <p className="mt-1 text-sm text-ink-muted">
           Every resume you have generated, re-downloadable exactly as it was.
         </p>
       </header>
@@ -86,7 +86,7 @@ export default function History() {
 
       {items.length === 0 ? (
         <div className="card text-center">
-          <p className="text-sm text-slate-600">Nothing here yet.</p>
+          <p className="text-sm text-ink-muted">Nothing here yet.</p>
           <Link to="/tailor" className="btn-primary mt-4">
             Tailor your first resume
           </Link>
@@ -99,8 +99,8 @@ export default function History() {
               className="card flex items-center justify-between gap-4 py-3"
             >
               <div>
-                <p className="font-medium text-slate-900">{item.job_title}</p>
-                <p className="text-xs text-slate-500">
+                <p className="font-medium text-ink">{item.job_title}</p>
+                <p className="text-xs text-ink-faint">
                   {new Date(item.created_at).toLocaleString()}
                 </p>
               </div>

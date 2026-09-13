@@ -138,14 +138,14 @@ export default function GitHubImportPanel({ onChange }: { onChange: () => void }
             {searching ? 'Fetching…' : 'Find repos'}
           </button>
         </div>
-        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <label className="mt-2 flex items-center gap-2 text-xs text-ink-faint">
           <input
             type="checkbox"
             checked={includeForks}
             onChange={(event) => setIncludeForks(event.target.checked)}
           />
           Include forks
-          <span className="text-slate-400">
+          <span className="text-ink-faint">
             (off by default - a fork you never committed to is someone else's work)
           </span>
         </label>
@@ -182,10 +182,10 @@ export default function GitHubImportPanel({ onChange }: { onChange: () => void }
 
       {repos && repos.length > 0 && (
         <>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-            <p className="text-sm text-slate-600">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+            <p className="text-sm text-ink-muted">
               {selectable.length} repo{selectable.length === 1 ? '' : 's'} available ·{' '}
-              <span className={atLimit ? 'font-medium text-brand-700' : ''}>
+              <span className={atLimit ? 'font-medium text-iris-fg' : ''}>
                 {selected.size} of {MAX_BATCH_IMPORT} selected
               </span>
             </p>
@@ -202,13 +202,13 @@ export default function GitHubImportPanel({ onChange }: { onChange: () => void }
           </div>
 
           {importing && (
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-ink-faint">
               Each repo needs its own AI call, so this takes a few seconds per
               project. Leave this tab open.
             </p>
           )}
 
-          <ul className="mt-3 max-h-96 divide-y divide-slate-100 overflow-y-auto">
+          <ul className="mt-3 max-h-96 divide-y divide-line overflow-y-auto">
             {repos.map((repo) => {
               const checked = selected.has(repo.full_name)
               const disabled =
@@ -231,24 +231,24 @@ export default function GitHubImportPanel({ onChange }: { onChange: () => void }
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-slate-900">{repo.name}</span>
+                        <span className="font-medium text-ink">{repo.name}</span>
                         {repo.language && <span className="chip">{repo.language}</span>}
                         {repo.stars > 0 && (
-                          <span className="text-xs text-slate-400">
-                            ★ {repo.stars}
+                          <span className="text-xs text-ink-faint">
+                            {repo.stars} {repo.stars === 1 ? 'star' : 'stars'}
                           </span>
                         )}
                         {repo.is_fork && (
-                          <span className="text-xs text-slate-400">fork</span>
+                          <span className="text-xs text-ink-faint">fork</span>
                         )}
                         {repo.already_imported && (
-                          <span className="text-xs font-medium text-emerald-600">
+                          <span className="text-xs font-medium text-success">
                             already in vault
                           </span>
                         )}
                       </span>
                       {repo.description && (
-                        <span className="mt-0.5 block truncate text-sm text-slate-500">
+                        <span className="mt-0.5 block truncate text-sm text-ink-faint">
                           {repo.description}
                         </span>
                       )}

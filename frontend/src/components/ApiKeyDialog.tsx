@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Close } from './icons'
 
 import {
   clearGeminiKey,
@@ -90,19 +91,19 @@ export default function ApiKeyDialog({
       // Clicking the backdrop closes; clicking inside must not, hence the
       // stopPropagation on the panel.
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 py-10 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-void/70 p-4 py-10 backdrop-blur-sm"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="api-key-title"
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
+        className="w-full max-w-lg rounded-xl border border-line bg-surface p-6 shadow-lg"
       >
         <div className="flex items-start justify-between gap-4">
           <h2
             id="api-key-title"
-            className="text-lg font-semibold tracking-tight text-slate-900"
+            className="text-lg font-semibold tracking-tight text-ink"
           >
             Use your own Gemini API key
           </h2>
@@ -110,13 +111,13 @@ export default function ApiKeyDialog({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 text-xl leading-none text-slate-400 hover:text-slate-600"
+            className="shrink-0 text-xl leading-none text-ink-faint hover:text-ink-muted"
           >
-            ×
+            <Close size={18} />
           </button>
         </div>
 
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-ink-muted">
           ResumeMaxxer covers a few tailoring runs each week. Add your own key
           and you get unlimited runs on Google's free tier instead - it takes
           about a minute, and the key stays in this browser.
@@ -126,13 +127,13 @@ export default function ApiKeyDialog({
             Written out in full on purpose. A student who has just been told
             "you are out of free runs" is mid-task and frustrated; sending them
             off to find Google's docs loses them. */}
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-800">
+        <div className="mt-4 rounded-xl border border-line bg-surface-2 p-4">
+          <h3 className="text-sm font-semibold text-ink">
             How to get one
           </h3>
-          <ol className="mt-2 space-y-2 text-sm text-slate-700">
+          <ol className="mt-2 space-y-2 text-sm text-ink-muted">
             <li className="flex gap-2">
-              <span className="font-semibold text-brand-600">1.</span>
+              <span className="font-semibold text-iris-fg">1.</span>
               <span>
                 Open{' '}
                 <a
@@ -141,7 +142,7 @@ export default function ApiKeyDialog({
                   // noreferrer alongside noopener: this is an external tab and
                   // it has no business knowing where it was opened from.
                   rel="noopener noreferrer"
-                  className="font-medium text-brand-600 underline"
+                  className="font-medium text-iris-fg underline"
                 >
                   aistudio.google.com/apikey
                 </a>{' '}
@@ -150,7 +151,7 @@ export default function ApiKeyDialog({
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="font-semibold text-brand-600">2.</span>
+              <span className="font-semibold text-iris-fg">2.</span>
               <span>
                 Click <strong>Create API key</strong>. If it asks which Google
                 Cloud project to use, take the one it suggests - a new account
@@ -158,22 +159,22 @@ export default function ApiKeyDialog({
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="font-semibold text-brand-600">3.</span>
+              <span className="font-semibold text-iris-fg">3.</span>
               <span>
                 Copy the key it shows you. It is a long string starting with{' '}
-                <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">
+                <code className="rounded bg-line px-1 py-0.5 text-xs">
                   AIza
                 </code>
                 . Copy all of it - the end is easy to miss.
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="font-semibold text-brand-600">4.</span>
+              <span className="font-semibold text-iris-fg">4.</span>
               <span>Paste it below and save. That is it.</span>
             </li>
           </ol>
 
-          <p className="mt-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+          <p className="mt-3 border-t border-line pt-3 text-xs text-ink-faint">
             Google's free tier covers this kind of use. If you ever want the key
             back or want to switch it off, the same page lists your keys and can
             delete them - deleting it there stops it working here immediately.
@@ -182,14 +183,14 @@ export default function ApiKeyDialog({
 
         {/* --- Current key ----------------------------------------------- */}
         {saved && (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-success/40 bg-success-wash px-3 py-2">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-emerald-800">
+              <p className="text-sm font-medium text-success">
                 A key is saved in this browser
               </p>
               {/* Masked, never whole: enough to recognise the key you chose,
                   useless to anyone reading over a shoulder. */}
-              <p className="font-mono text-xs text-emerald-700">
+              <p className="font-mono text-xs text-success">
                 {maskGeminiKey(saved)}
               </p>
             </div>
@@ -229,7 +230,7 @@ export default function ApiKeyDialog({
             }}
           />
           {error && (
-            <p role="alert" className="mt-2 text-sm text-red-600">
+            <p role="alert" className="mt-2 text-sm text-danger">
               {error}
             </p>
           )}
@@ -249,7 +250,7 @@ export default function ApiKeyDialog({
           </button>
         </div>
 
-        <p className="mt-4 text-xs text-slate-400">
+        <p className="mt-4 text-xs text-ink-faint">
           The key is stored in this browser only and sent with your tailoring
           requests so they run on your Google quota. ResumeMaxxer never saves it
           on the server, so you will need to paste it again on another device.

@@ -68,7 +68,7 @@ function ProjectForm({
         </div>
         <div>
           <label className="label" htmlFor="proj-url">
-            Link <span className="text-slate-400">(optional)</span>
+            Link <span className="text-ink-faint">(optional)</span>
           </label>
           <input
             id="proj-url"
@@ -174,7 +174,7 @@ export default function ProjectSection({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">Projects</h2>
+        <h2 className="text-lg font-semibold text-ink">Projects</h2>
         <button
           type="button"
           className="btn-secondary"
@@ -194,7 +194,7 @@ export default function ProjectSection({
           The username listing only finds repos the student owns. This covers
           a repo they contributed to under someone else's account. */}
       <details className="mb-3">
-        <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-700">
+        <summary className="cursor-pointer text-sm text-ink-faint hover:text-ink-muted">
           Import a single repo by URL instead
         </summary>
         <form onSubmit={importRepo} className="card mt-2">
@@ -284,21 +284,21 @@ export default function ProjectSection({
                   onMove={(from, to) => void move(movedIds(projects, from, to))}
                 />
                 <div>
-                  <h3 className="flex items-center gap-2 font-semibold text-slate-900">
+                  <h3 className="flex items-center gap-2 font-semibold text-ink">
                     {project.title}
                     {project.is_github_imported && (
                       <span className="chip">AI-drafted · review</span>
                     )}
                   </h3>
                   {project.tech_stack && (
-                    <p className="mt-0.5 text-xs text-slate-500">{project.tech_stack}</p>
+                    <p className="mt-0.5 text-xs text-ink-faint">{project.tech_stack}</p>
                   )}
                   {project.repo_url && (
                     <a
                       href={project.repo_url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="text-xs text-brand-600 hover:underline"
+                      className="text-xs text-iris-fg hover:underline"
                     >
                       {project.repo_url}
                     </a>
@@ -338,7 +338,7 @@ export default function ProjectSection({
         ))}
 
         {projects.length === 0 && !manualOpen && (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-faint">
             No projects yet. Importing a GitHub repo is the fastest start.
           </p>
         )}

@@ -90,11 +90,11 @@ export default function ResumePreview({
     <div className="space-y-3">
       {/* --- Why these entries were picked ------------------------------- */}
       {resume.selection_rationale && (
-        <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
-          <p className="text-xs font-semibold tracking-wide text-brand-700 uppercase">
+        <div className="rounded-xl border border-iris bg-iris/10 px-4 py-3">
+          <p className="text-xs font-semibold tracking-wide text-iris-fg uppercase">
             Why these were chosen
           </p>
-          <p className="mt-1 text-sm text-slate-700">
+          <p className="mt-1 text-sm text-ink-muted">
             {resume.selection_rationale}
           </p>
         </div>
@@ -102,9 +102,9 @@ export default function ResumePreview({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-900">Preview</h2>
-          <p className="text-xs text-slate-500">
-            Compiled from LaTeX — this is the exact file you will download.
+          <h2 className="font-semibold text-ink">Preview</h2>
+          <p className="text-xs text-ink-faint">
+            Compiled from LaTeX - this is the exact file you will download.
           </p>
         </div>
 
@@ -160,7 +160,7 @@ export default function ResumePreview({
         <ResumeEditor resume={resume} onChange={onChange} />
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
         {rendering && !url ? (
           <div className="grid h-[820px] place-items-center">
             <Spinner label="Compiling your resume…" />
@@ -175,7 +175,7 @@ export default function ResumePreview({
             style={{ border: 'none' }}
           />
         ) : (
-          <div className="grid h-[820px] place-items-center text-sm text-slate-500">
+          <div className="grid h-[820px] place-items-center text-sm text-ink-faint">
             No preview available.
           </div>
         )}

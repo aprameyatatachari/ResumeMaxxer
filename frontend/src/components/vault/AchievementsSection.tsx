@@ -72,7 +72,7 @@ function AchievementForm({
         </div>
         <div>
           <label className="label" htmlFor="ach-date">
-            When <span className="text-slate-400">(optional)</span>
+            When <span className="text-ink-faint">(optional)</span>
           </label>
           <input
             id="ach-date"
@@ -85,7 +85,7 @@ function AchievementForm({
         </div>
         <div className="sm:col-span-2">
           <label className="label" htmlFor="ach-detail">
-            Detail <span className="text-slate-400">(optional)</span>
+            Detail <span className="text-ink-faint">(optional)</span>
           </label>
           <input
             id="ach-detail"
@@ -156,8 +156,8 @@ export default function AchievementsSection({
     <section>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Achievements</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-ink">Achievements</h2>
+          <p className="text-xs text-ink-faint">
             Hackathons, competitions, scholarships, coding ratings. Printed exactly
             as you write them.
           </p>
@@ -234,15 +234,15 @@ export default function AchievementsSection({
                 }
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-800">
+                <p className="text-sm text-ink">
                   <span className="font-semibold">{achievement.title}</span>
                   {achievement.description && `: ${achievement.description}`}
                 </p>
                 {achievement.date_text && (
-                  <p className="text-xs text-slate-500">{achievement.date_text}</p>
+                  <p className="text-xs text-ink-faint">{achievement.date_text}</p>
                 )}
               </div>
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-ink-faint">
                 <input
                   type="checkbox"
                   checked={shown[achievement.id] ?? achievement.include_on_resume}
@@ -277,7 +277,7 @@ export default function AchievementsSection({
         )}
 
         {achievements.length === 0 && !adding && (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-faint">
             Nothing yet. A hackathon placing or a scholarship is worth a line.
           </p>
         )}

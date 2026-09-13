@@ -248,7 +248,7 @@ function ScoreInput({
   return (
     <div>
       <label className="label" htmlFor={id}>
-        {label} <span className="text-slate-400">(optional)</span>
+        {label} <span className="text-ink-faint">(optional)</span>
       </label>
       <div className="flex gap-2">
         <input
@@ -509,10 +509,10 @@ function EducationForm({
                 type="button"
                 onClick={() => changeLevel(level)}
                 aria-pressed={form.level === level}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-xl border px-3 py-1.5 text-sm transition-colors ${
                   form.level === level
-                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
-                    : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                    ? 'border-iris bg-iris/10 font-medium text-iris-fg'
+                    : 'border-line-strong bg-surface text-ink-muted hover:bg-surface-2'
                 }`}
               >
                 {LEVEL_LABELS[level]}
@@ -520,7 +520,7 @@ function EducationForm({
             ))}
           </div>
           {(isClassLevel || isSchool) && (
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-ink-faint">
               {isSchool
                 ? 'One heading for your time at this school, with your Class X / XII results as bullets underneath. Changed schools? Add one School entry for each.'
                 : 'Prefer one heading per school with your results as bullets? Use "School (X & XII together)" instead.'}
@@ -599,7 +599,7 @@ function EducationForm({
           <div className="sm:w-1/2">
             <span className="label">
               Year of passing{' '}
-              <span className="text-slate-400">(or expected)</span>
+              <span className="text-ink-faint">(or expected)</span>
             </span>
             <YearSelect
               label="Year of passing"
@@ -632,7 +632,7 @@ function EducationForm({
             <div>
               <span className="label">
                 {isSchool ? 'Left this school' : 'Graduating'}{' '}
-                <span className="text-slate-400">(blank if ongoing)</span>
+                <span className="text-ink-faint">(blank if ongoing)</span>
               </span>
               <div className="flex gap-2">
                 {isDegree && (
@@ -687,7 +687,7 @@ function EducationForm({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="label" htmlFor="start-grade">
-                From grade <span className="text-slate-400">(optional)</span>
+                From grade <span className="text-ink-faint">(optional)</span>
               </label>
               <input
                 id="start-grade"
@@ -700,7 +700,7 @@ function EducationForm({
             </div>
             <div>
               <label className="label" htmlFor="end-grade">
-                To grade <span className="text-slate-400">(optional)</span>
+                To grade <span className="text-ink-faint">(optional)</span>
               </label>
               <input
                 id="end-grade"
@@ -717,8 +717,8 @@ function EducationForm({
         {/* --- School: the results taken here ----------------------- */}
         {isSchool && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-slate-200 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+            <div className="rounded-xl border border-line p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink">
                 <input
                   type="checkbox"
                   checked={form.has_class12}
@@ -753,8 +753,8 @@ function EducationForm({
               )}
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+            <div className="rounded-xl border border-line p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink">
                 <input
                   type="checkbox"
                   checked={form.has_class10}
@@ -838,10 +838,10 @@ export default function EducationSection({
     <section>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Education</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-ink">Education</h2>
+          <p className="text-xs text-ink-faint">
             Add your degree plus Class XII and Class X - Indian recruiters screen
-            on board marks. Drag the ⠿ grip or use the arrows to set the order they appear on your
+            on board marks. Drag the grip or use the arrows to set the order they appear on your
             resume.
           </p>
         </div>
@@ -914,31 +914,31 @@ export default function EducationSection({
                     onMove={(from, to) => void move(movedIds(educations, from, to))}
                   />
                   <div>
-                    <h3 className="font-semibold text-slate-900">
+                    <h3 className="font-semibold text-ink">
                       {education.institution}
                       {education.location && (
-                        <span className="font-normal text-slate-500">
+                        <span className="font-normal text-ink-faint">
                           {' '}
                           · {education.location}
                         </span>
                       )}
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-ink-muted">
                       {describe(education)}
                       {score && ` · ${score}`}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-xs text-ink-faint">
                       {formatPeriod(education)}
                     </p>
                     {bullets.length > 0 && (
-                      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
+                      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-ink-muted">
                         {bullets.map((line) => (
                           <li key={line}>{line}</li>
                         ))}
                       </ul>
                     )}
                     {education.coursework && (
-                      <p className="mt-2 text-sm text-slate-600">
+                      <p className="mt-2 text-sm text-ink-muted">
                         Coursework: {education.coursework}
                       </p>
                     )}
@@ -970,7 +970,7 @@ export default function EducationSection({
         })}
 
         {educations.length === 0 && !adding && (
-          <p className="text-sm text-slate-500">Nothing added yet.</p>
+          <p className="text-sm text-ink-faint">Nothing added yet.</p>
         )}
       </div>
     </section>
