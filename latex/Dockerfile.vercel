@@ -70,3 +70,13 @@ WORKDIR /app
 RUN mkdir -p /app/temp
 
 EXPOSE 3000
+
+# ---------------------------------------------------------------------------
+#  API key
+# ---------------------------------------------------------------------------
+#  Upstream checks `x-api-key` against process.env.API_KEY and rejects every
+#  request when that is unset. The backend sends LATEX_API_KEY. On Vercel both
+#  services share one set of project environment variables, so instead of
+#  asking for the same secret twice under two names, API_KEY falls back to
+#  LATEX_API_KEY. An explicit API_KEY still wins.
+CMD ["sh", "-c", "export API_KEY=\"${API_KEY:-$LATEX_API_KEY}\"; exec bun src/index.ts"]
