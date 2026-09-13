@@ -34,7 +34,11 @@ logger = logging.getLogger("resumemaxxer.jd_parser")
 # of the message below, which is the one that actually tells a student their
 # file is a scan. Staying under the platform limit keeps every rejection ours.
 MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
-MAX_EXTRACTED_CHARS = 20_000
+# A long job description with benefits, perks and an equal-opportunity
+# statement runs past 20,000 characters, and an earlier 20k cap cut real
+# postings short. 100k is far beyond any genuine JD - roughly 40 pages - and
+# only exists to stop a mis-uploaded book from reaching the model.
+MAX_EXTRACTED_CHARS = 100_000
 MIN_EXTRACTED_CHARS = 50
 
 SUPPORTED_EXTENSIONS = (".pdf", ".docx", ".txt", ".md")
@@ -200,8 +204,8 @@ def extract_text(filename: Optional[str], data: bytes) -> str:
         )
 
     if len(text) > MAX_EXTRACTED_CHARS:
-        # Keep the head: JDs put the role and requirements up top, and boilerplate
-        # (equal-opportunity statements, benefits) at the bottom.
+        # Only a document that is not really a JD gets here. Keep the head:
+        # JDs put the role and requirements up top.
         logger.info("Truncating extracted JD from %d chars", len(text))
         text = text[:MAX_EXTRACTED_CHARS]
 

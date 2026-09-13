@@ -402,3 +402,22 @@ def test_required_terms_outrank_inferred_ones_when_shortlisting(
     assert context.index("Modelled warehouse tables in SQL") < context.index(
         "Wrote reports in Excel"
     )
+
+
+def test_a_long_job_description_is_read_in_full(client, stocked_vault, mock_ai):
+    """Regression: a 20k parser cap and a 15k prompt cap once cut real postings
+    short, and the UI showed only a 600-character excerpt. A ~40k-character
+    JD must reach the AI whole and come back whole for the student to check."""
+    filler = "Responsibilities include building reliable Python services. " * 700
+    long_jd = f"Backend intern. {filler}FINAL-REQUIREMENT-MARKER: Kubernetes."
+    assert len(long_jd) > 40_000
+
+    response = client.post(
+        "/api/tailor", files={"file": ("jd.txt", long_jd.encode(), "text/plain")}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert "FINAL-REQUIREMENT-MARKER" in mock_ai["jd_text"]
+    assert "FINAL-REQUIREMENT-MARKER" in body["source"]["preview"]
+    assert body["source"]["char_count"] == len(body["source"]["preview"])

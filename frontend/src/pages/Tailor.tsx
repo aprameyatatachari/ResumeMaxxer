@@ -353,9 +353,10 @@ export default function Tailor() {
               Read {result.source.char_count.toLocaleString()} characters from{' '}
               {result.source.filename} — check this looks right
             </summary>
-            <pre className="mt-3 max-h-48 overflow-y-auto rounded-lg bg-slate-50 p-3 text-xs whitespace-pre-wrap text-slate-600">
+            {/* The whole extracted text, scrollable. An excerpt ending in "…"
+                read as "the app only read this much". */}
+            <pre className="mt-3 max-h-96 overflow-y-auto rounded-lg bg-slate-50 p-3 text-xs whitespace-pre-wrap text-slate-600">
               {result.source.preview}
-              {result.source.char_count > result.source.preview.length && '\n…'}
             </pre>
           </details>
 

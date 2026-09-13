@@ -367,7 +367,7 @@ Weight these above anything else in the posting. Every one of them should be
 represented in `keywords`, and the terms drawn from here must ALSO be listed in
 `required_keywords`.
 ---
-{qualifications_block[:6000]}
+{qualifications_block}
 ---
 """
     else:
@@ -393,7 +393,7 @@ Extract:
 
 FULL JOB DESCRIPTION:
 ---
-{jd_text[:15000]}
+{jd_text}
 ---
 """.strip()
 
@@ -491,7 +491,7 @@ between two pieces of vault material, pick the one that answers a requirement
 here. Mirror this section's wording in the bullets wherever the vault
 truthfully supports it.
 ---
-{qualifications_block[:6000]}
+{qualifications_block}
 ---
 PRIORITY KEYWORDS (drawn from the section above): {", ".join(analysis.required_keywords) or "(none)"}
 """
