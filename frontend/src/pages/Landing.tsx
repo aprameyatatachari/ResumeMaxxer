@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import DialText from '../components/DialText'
 import SiteImage from '../components/SiteImage'
 import { ArrowRight, Check, FileText, Lock } from '../components/icons'
 import { useReveal } from '../hooks/useReveal'
@@ -151,9 +152,7 @@ export default function Landing() {
         />
         <div className="mx-auto w-full max-w-[1200px]">
           <div className="max-w-[620px]">
-            <h1 className="display text-[clamp(2.75rem,7vw,5.25rem)] text-white" data-reveal>
-              Your whole record, locked in one vault.
-            </h1>
+            <DialText as="h1" className="display text-[clamp(2.75rem,7vw,5.25rem)] text-white" text="Your whole record, locked in one vault." />
             <p
               className="mt-6 max-w-[48ch] text-base leading-relaxed text-ink-muted sm:text-lg"
               data-reveal
@@ -183,9 +182,7 @@ export default function Landing() {
       {/* What is inside: the product itself. */}
       <section className="band-void px-4 pb-24 sm:px-6 sm:pb-32">
         <div className="mx-auto max-w-[1200px]">
-          <h2 className="display-sm max-w-[22ch] text-[clamp(1.75rem,3.5vw,2.5rem)] text-white" data-reveal>
-            Inside: everything you have done, ready to be cut for any role.
-          </h2>
+          <DialText as="h2" className="display-sm max-w-[22ch] text-[clamp(1.75rem,3.5vw,2.5rem)] text-white" text="Inside: everything you have done, ready to be cut for any role." />
           <HeroProduct />
         </div>
       </section>
@@ -193,9 +190,7 @@ export default function Landing() {
       {/* The job description is the map. */}
       <section id="how" className="scroll-mt-16 bg-bg px-4 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-[1200px]">
-          <h2 className="display max-w-[18ch] text-[clamp(2.25rem,5vw,3.75rem)]" data-reveal>
-            Every line of the job description gets an answer.
-          </h2>
+          <DialText as="h2" className="display max-w-[18ch] text-[clamp(2.25rem,5vw,3.75rem)]" text="Every line of the job description gets an answer." />
           <p className="mt-5 max-w-[56ch] text-ink-muted" data-reveal>
             Here is a sample posting. Scroll, and watch which part of it each piece of
             ResumeMaxxer is built to meet.
@@ -253,9 +248,7 @@ export default function Landing() {
       <section className="band-void relative isolate overflow-hidden px-4 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto grid max-w-[1200px] items-center gap-14 lg:grid-cols-2">
           <div>
-            <h2 className="display max-w-[14ch] text-[clamp(2.25rem,5vw,3.75rem)] text-white" data-reveal>
-              The page recruiters actually open.
-            </h2>
+            <DialText as="h2" className="display max-w-[14ch] text-[clamp(2.25rem,5vw,3.75rem)] text-white" text="The page recruiters actually open." />
             <p className="mt-5 max-w-[48ch] leading-relaxed text-ink-muted" data-reveal>
               Typeset in LaTeX from your vault, so text stays text for the tracking
               system and spacing holds up when a human reads it.
@@ -293,9 +286,7 @@ export default function Landing() {
       {/* Access. */}
       <section className="bg-bg px-4 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-[1200px]">
-          <h2 className="display max-w-[16ch] text-[clamp(2.25rem,5vw,3.75rem)]" data-reveal>
-            Free to start. Yours to keep going.
-          </h2>
+          <DialText as="h2" className="display max-w-[16ch] text-[clamp(2.25rem,5vw,3.75rem)]" text="Free to start. Yours to keep going." />
           <dl className="mt-12 divide-y divide-line border-y border-line">
             {[
               { title: '3 tailors every week', body: 'Every account gets three free tailored resumes, reset each Monday. No card.' },
@@ -323,9 +314,7 @@ export default function Landing() {
           className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-80"
         />
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_45%_at_center,rgba(9,10,12,0.7),transparent_75%),linear-gradient(180deg,#090a0c_0%,transparent_25%,transparent_75%,#090a0c_100%)]" aria-hidden="true" />
-        <h2 className="display mx-auto max-w-[16ch] text-[clamp(2.25rem,6vw,4.25rem)] text-white" data-reveal>
-          Open your vault before the next deadline.
-        </h2>
+        <DialText as="h2" className="display mx-auto max-w-[16ch] text-[clamp(2.25rem,6vw,4.25rem)] text-white" text="Open your vault before the next deadline." />
         <div className="mt-9 flex justify-center" data-reveal>
           <Link to={primary.to} className="btn-white">
             {primary.label}
