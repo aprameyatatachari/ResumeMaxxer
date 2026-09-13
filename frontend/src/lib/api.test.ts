@@ -30,6 +30,24 @@ afterEach(() => {
   clearGeminiKey()
 })
 
+describe('resume length', () => {
+  const file = new File([new Uint8Array([1])], 'jd.pdf', { type: 'application/pdf' })
+
+  it('asks for one page unless the student opted in', async () => {
+    const fetchMock = mockFetch({ json: async () => ({ resume_id: 1 }) })
+    await createApiClient(token).tailor(file)
+    const body = fetchMock.mock.calls[0][1].body as FormData
+    expect(body.get('allow_multiple_pages')).toBeNull()
+  })
+
+  it('sends the opt-in when the student allows more than one page', async () => {
+    const fetchMock = mockFetch({ json: async () => ({ resume_id: 1 }) })
+    await createApiClient(token).tailor(file, undefined, true)
+    const body = fetchMock.mock.calls[0][1].body as FormData
+    expect(body.get('allow_multiple_pages')).toBe('true')
+  })
+})
+
 describe("the student's own Gemini key", () => {
   const STUDENT_KEY = 'AIzaSyExampleKeyThatIsLongEnough00000000'
 

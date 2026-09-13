@@ -133,6 +133,82 @@ export default function ResumeEditor({
         </fieldset>
       )}
 
+      {/* --- Extracurriculars ------------------------------------------- */}
+      {(resume.extracurriculars ?? []).length > 0 && (
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-slate-900">
+            Extracurricular activities
+          </legend>
+          {(resume.extracurriculars ?? []).map((entry, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  className="input"
+                  aria-label={`Extracurricular ${i + 1} title`}
+                  value={entry.title}
+                  onChange={(e) =>
+                    edit((d) => { d.extracurriculars![i].title = e.target.value })
+                  }
+                />
+                <input
+                  className="input"
+                  aria-label={`Extracurricular ${i + 1} organization`}
+                  value={entry.organization}
+                  onChange={(e) =>
+                    edit((d) => { d.extracurriculars![i].organization = e.target.value })
+                  }
+                />
+              </div>
+              {entry.bullets.map((bullet, b) => (
+                <textarea
+                  key={b}
+                  className="input mt-2 text-sm"
+                  rows={2}
+                  aria-label={`Extracurricular ${i + 1} bullet ${b + 1}`}
+                  value={bullet}
+                  onChange={(e) =>
+                    edit((d) => { d.extracurriculars![i].bullets[b] = e.target.value })
+                  }
+                />
+              ))}
+            </div>
+          ))}
+        </fieldset>
+      )}
+
+      {/* --- Achievements ----------------------------------------------- */}
+      {(resume.achievements ?? []).length > 0 && (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-semibold text-slate-900">Achievements</legend>
+          {(resume.achievements ?? []).map((item, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[2fr_3fr_1fr]">
+              <input
+                className="input"
+                aria-label={`Achievement ${i + 1} title`}
+                value={item.title}
+                onChange={(e) => edit((d) => { d.achievements![i].title = e.target.value })}
+              />
+              <input
+                className="input"
+                aria-label={`Achievement ${i + 1} detail`}
+                value={item.description}
+                onChange={(e) =>
+                  edit((d) => { d.achievements![i].description = e.target.value })
+                }
+                placeholder="Detail (optional)"
+              />
+              <input
+                className="input"
+                aria-label={`Achievement ${i + 1} date`}
+                value={item.date}
+                onChange={(e) => edit((d) => { d.achievements![i].date = e.target.value })}
+                placeholder="Date"
+              />
+            </div>
+          ))}
+        </fieldset>
+      )}
+
       {/* --- Skills ------------------------------------------------------ */}
       {resume.skills.length > 0 && (
         <fieldset className="space-y-2">

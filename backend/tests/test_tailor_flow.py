@@ -89,14 +89,14 @@ def stocked_vault_fixture(session, user):
 def mock_ai_fixture(monkeypatch):
     calls = {}
 
-    def analyse(jd_text, qualifications_block="", api_key=None):
+    def analyse(jd_text, qualifications_block="", api_key=None, limits=None):
         calls["jd_text"] = jd_text
         calls["analysis_qualifications"] = qualifications_block
         calls["analysis_api_key"] = api_key
         return ANALYSIS
 
     def tailor(*, analysis, vault_context, student_name, student_email,
-               qualifications_block="", api_key=None):
+               qualifications_block="", api_key=None, limits=None):
         calls["vault_context"] = vault_context
         calls["student_name"] = student_name
         calls["tailor_qualifications"] = qualifications_block
@@ -126,7 +126,7 @@ def test_tailoring_returns_a_renderable_payload_and_stores_it(
     # `selection_rationale` rides along for the preview but is never rendered.
     assert list(body["resume"]) == [
         "header", "education", "experience", "projects", "skills",
-        "selection_rationale",
+        "extracurriculars", "achievements", "selection_rationale",
     ]
     assert body["resume"]["skills"][0]["category"] == "Languages"
     assert body["resume"]["selection_rationale"].startswith("Chose the")
@@ -161,7 +161,7 @@ def test_an_explicit_job_title_overrides_the_inferred_one(
 def test_ai_failure_becomes_a_502_not_a_500(client, stocked_vault, monkeypatch):
     """The frontend needs to tell "the AI failed" apart from "your request was
     wrong", so this must not surface as a generic server error."""
-    def boom(_jd_text, qualifications_block="", api_key=None):
+    def boom(_jd_text, qualifications_block="", api_key=None, limits=None):
         raise ai_service.AIServiceError("Gemini returned malformed output.")
 
     monkeypatch.setattr(ai_service, "analyse_job_description", boom)
@@ -376,7 +376,7 @@ def test_required_terms_outrank_inferred_ones_when_shortlisting(
 
     seen = {}
 
-    def analyse(jd_text, qualifications_block="", api_key=None):
+    def analyse(jd_text, qualifications_block="", api_key=None, limits=None):
         return JDAnalysis(
             job_title="Data Analyst Intern", company="",
             hard_skills=["sql", "excel"], soft_skills=[],
@@ -387,7 +387,7 @@ def test_required_terms_outrank_inferred_ones_when_shortlisting(
         )
 
     def tailor(*, analysis, vault_context, student_name, student_email,
-               qualifications_block="", api_key=None):
+               qualifications_block="", api_key=None, limits=None):
         seen["vault_context"] = vault_context
         return RESUME
 

@@ -432,6 +432,51 @@ def _render_experience(payload: ResumePayload) -> str:
     return "\n".join(lines)
 
 
+def _render_extracurriculars(payload: ResumePayload) -> str:
+    """Clubs, societies and leadership roles - laid out exactly like
+    Experience, under their own heading."""
+    if not payload.extracurriculars:
+        return ""
+
+    lines = ["\n%-----------EXTRACURRICULAR-----------",
+             "\\section{Extracurricular Activities}",
+             "  \\resumeSubHeadingListStart"]
+    for entry in payload.extracurriculars:
+        lines.append("    \\resumeSubheading")
+        lines.append(f"      {{{escape(entry.title)}}}{{{escape(entry.date_range)}}}")
+        lines.append(
+            f"      {{{escape(entry.organization)}}}{{{escape(entry.location)}}}"
+        )
+        lines += _render_bullets(entry.bullets)
+    lines.append("  \\resumeSubHeadingListEnd\n")
+    return "\n".join(lines)
+
+
+def _render_achievements(payload: ResumePayload) -> str:
+    """One bullet per achievement: bold title, optional detail, date flush
+    right - the same visual rhythm as the rest of the template.
+
+    A single-level list, not the nested lists the other sections use: those
+    need a \\resumeSubheading to open each item, and an achievement has none.
+    """
+    if not payload.achievements:
+        return ""
+
+    lines = ["\n%-----------ACHIEVEMENTS-----------", "\\section{Achievements}",
+             # 0.3in lines the bullets up under the section's text rather than
+             # hanging left of it - checked against a rendered page.
+             " \\begin{itemize}[leftmargin=0.3in, label=\\labelitemii]"]
+    for item in payload.achievements:
+        text = f"\\textbf{{{escape(item.title)}}}"
+        if item.description.strip():
+            text += f"{{: {escape(item.description)}}}"
+        if item.date.strip():
+            text += f" \\hfill \\emph{{{escape(item.date)}}}"
+        lines.append(f"    \\resumeItem{{{text}}}")
+    lines.append(" \\end{itemize}\n")
+    return "\n".join(lines)
+
+
 def _render_projects(payload: ResumePayload) -> str:
     if not payload.projects:
         return ""
@@ -482,6 +527,8 @@ def render_latex(payload: ResumePayload) -> str:
         + _render_experience(payload)
         + _render_projects(payload)
         + _render_skills(payload)
+        + _render_extracurriculars(payload)
+        + _render_achievements(payload)
         + "\n%-------------------------------------------\n\\end{document}\n"
     )
 

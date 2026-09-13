@@ -277,6 +277,64 @@ test('extra links can be added, hidden from the resume and rearranged', async ({
   await expect(linkNames).toHaveText(['kaggle.com/ananya', 'LeetCode'])
 })
 
+test('extracurricular activities have their own section, separate from experience', async ({ page }) => {
+  const experience = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Experience', exact: true }) })
+  const extracurricular = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Extracurricular activities' }) })
+
+  await page.getByRole('button', { name: 'Add activity' }).click()
+  await page.getByLabel('Title').fill('Head of Technical Events')
+  await page.getByLabel('Organization').fill('IEEE Student Branch')
+  await page.getByLabel('Started').fill('2023-08-01')
+  await page.getByRole('button', { name: 'Save activity' }).click()
+
+  await expect(extracurricular.getByText('Head of Technical Events')).toBeVisible()
+  await expect(experience.getByText('Head of Technical Events')).toBeHidden()
+
+  // Changing the type moves it to the other section.
+  await page.getByRole('button', { name: 'Edit Head of Technical Events at IEEE Student Branch' }).click()
+  await page.getByLabel('Type').selectOption('WORK')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(experience.getByText('Head of Technical Events')).toBeVisible()
+  await expect(extracurricular.getByText('Head of Technical Events')).toBeHidden()
+})
+
+test('achievements can be added, hidden, reordered and edited', async ({ page }) => {
+  const add = async (title: string, detail = '', when = '') => {
+    await page.getByRole('button', { name: 'Add achievement' }).click()
+    await page.getByLabel('Achievement', { exact: true }).fill(title)
+    if (detail) await page.getByLabel('Detail (optional)').fill(detail)
+    if (when) await page.getByLabel('When (optional)').fill(when)
+    await page.getByRole('button', { name: 'Save achievement' }).click()
+    await expect(page.getByText(title, { exact: true })).toBeVisible()
+  }
+  await add('Winner, Smart India Hackathon', '1st of 400 teams', 'Mar. 2024')
+  await add('Knight, LeetCode')
+
+  await page.getByLabel('Show Knight, LeetCode on resume').uncheck()
+  await page.getByRole('button', { name: 'Move Knight, LeetCode up' }).click()
+  await page.getByRole('button', { name: 'Edit Winner, Smart India Hackathon' }).click()
+  await page.getByLabel('When (optional)').fill('2024')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+
+  await page.reload()
+  const titles = page.locator('[data-sortable="achievement"] span.font-semibold')
+  await expect(titles).toHaveText(['Knight, LeetCode', 'Winner, Smart India Hackathon'])
+  await expect(page.getByLabel('Show Knight, LeetCode on resume')).not.toBeChecked()
+  await expect(page.getByText('2024', { exact: true })).toBeVisible()
+})
+
+test('the tailor page asks about resume length and remembers the answer', async ({ page }) => {
+  await page.goto('/tailor')
+  const onePage = page.getByRole('radio', { name: /Keep it to one page/ })
+  const longer = page.getByRole('radio', { name: /It can go past one page/ })
+
+  // One page unless the student says otherwise.
+  await expect(onePage).toBeChecked()
+  await longer.check()
+  await page.reload()
+  await expect(longer).toBeChecked()
+})
+
 test('tailoring refuses an empty vault instead of calling the AI', async ({ page }) => {
   await page.goto('/tailor')
 

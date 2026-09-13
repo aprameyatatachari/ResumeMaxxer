@@ -31,6 +31,18 @@ const STAGES = [
   'Fitting it onto one page…',
 ]
 
+const PAGE_PREFERENCE_KEY = 'resumemaxxer.allow_multiple_pages'
+
+/** The remembered length choice. Storage can throw (private mode, blocked
+ *  site data), in which case the default - one page - applies. */
+function readPagePreference(): boolean {
+  try {
+    return window.localStorage.getItem(PAGE_PREFERENCE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
 function formatSize(bytes: number): string {
   return bytes < 1024 * 1024
     ? `${Math.round(bytes / 1024)} KB`
@@ -122,6 +134,18 @@ export default function Tailor() {
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [jobTitle, setJobTitle] = useState('')
+  // One page is the default. A longer resume is the student's explicit choice,
+  // remembered in this browser so they are not asked again every time.
+  const [allowMultiplePages, setAllowMultiplePages] = useState(readPagePreference)
+
+  function choosePages(allow: boolean) {
+    setAllowMultiplePages(allow)
+    try {
+      window.localStorage.setItem(PAGE_PREFERENCE_KEY, String(allow))
+    } catch {
+      // Not remembered, but still applies to this run.
+    }
+  }
   const [result, setResult] = useState<TailorResponse | null>(null)
   // The payload the student may have edited. Kept apart from `result` so the
   // AI's original output is never lost by an edit.
@@ -197,7 +221,7 @@ export default function Tailor() {
     setResult(null)
     setEdited(null)
     try {
-      const response = await api.tailor(file, jobTitle.trim() || undefined)
+      const response = await api.tailor(file, jobTitle.trim() || undefined, allowMultiplePages)
       setResult(response)
       setEdited(response.resume)
       // The run reports the allowance it just spent, so the banner updates
@@ -312,6 +336,43 @@ export default function Tailor() {
             placeholder="Backend Engineering Intern"
           />
         </div>
+
+        {/* --- Length: the student decides, one page unless they opt in -- */}
+        <fieldset className="rounded-lg border border-slate-200 p-3">
+          <legend className="px-1 text-sm font-medium text-slate-700">Resume length</legend>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="radio"
+              name="page-length"
+              className="mt-1"
+              checked={!allowMultiplePages}
+              onChange={() => choosePages(false)}
+            />
+            <span>
+              <strong>Keep it to one page</strong>{' '}
+              <span className="text-slate-500">
+                - recommended for students and freshers. Only your most relevant
+                material makes the cut.
+              </span>
+            </span>
+          </label>
+          <label className="mt-2 flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="radio"
+              name="page-length"
+              className="mt-1"
+              checked={allowMultiplePages}
+              onChange={() => choosePages(true)}
+            />
+            <span>
+              <strong>It can go past one page</strong>{' '}
+              <span className="text-slate-500">
+                - fits more roles, projects, activities and achievements. Some
+                recruiters skim only the first page.
+              </span>
+            </span>
+          </label>
+        </fieldset>
 
         <div className="flex items-center gap-4">
           <button type="submit" className="btn-primary" disabled={busy || !file}>

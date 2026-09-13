@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EducationSection from '../components/vault/EducationSection'
+import AchievementsSection from '../components/vault/AchievementsSection'
 import ExperienceSection from '../components/vault/ExperienceSection'
 import ProfileSection from '../components/vault/ProfileSection'
 import ProjectSection from '../components/vault/ProjectSection'
@@ -81,6 +82,7 @@ export default function VaultPage() {
         <ProfileSection user={vault.user} links={vault.links} onChange={reload} />
         <EducationSection educations={vault.educations} onChange={reload} />
         <ExperienceSection
+          kind="WORK"
           experiences={vault.experiences}
           groupedBullets={groupedBullets}
           onChange={reload}
@@ -90,6 +92,13 @@ export default function VaultPage() {
           groupedBullets={groupedBullets}
           onChange={reload}
         />
+        <ExperienceSection
+          kind="EXTRACURRICULAR"
+          experiences={vault.experiences}
+          groupedBullets={groupedBullets}
+          onChange={reload}
+        />
+        <AchievementsSection achievements={vault.achievements} onChange={reload} />
       </DndProvider>
     </div>
   )

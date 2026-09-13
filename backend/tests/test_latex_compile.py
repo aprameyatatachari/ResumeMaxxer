@@ -18,7 +18,9 @@ import httpx
 import pytest
 
 import latex_renderer
+import ai_service
 from schemas import (
+    ResumeAchievement,
     ResumeEducation,
     ResumeExperience,
     ResumeHeader,
@@ -65,8 +67,10 @@ def _entry(index: int) -> ResumeExperience:
 def worst_case_fixture() -> ResumePayload:
     """The largest document the One-Page Rule permits.
 
-    3 education rows, 4 entries, 4 bullets each, 4 skill categories. If this
-    fits on one page, everything the backend can emit fits.
+    3 education rows, 4 entries, 4 bullets each, 4 skill categories, plus the
+    optional sections at their one-page budgets: 1 extracurricular with 2
+    bullets and 3 achievements, one long enough to wrap. If this fits on one page, everything the
+    backend can emit in one-page mode fits.
     """
     return ResumePayload(
         header=ResumeHeader(
@@ -119,6 +123,31 @@ def worst_case_fixture() -> ResumePayload:
             SkillCategory(category="Frameworks", items="FastAPI, React, Node.js, Flask"),
             SkillCategory(category="Developer Tools", items="Git, Docker, Postman, Linux"),
             SkillCategory(category="Libraries", items="pandas, NumPy, SQLAlchemy, pytest"),
+        ],
+        extracurriculars=[
+            ResumeExperience(
+                title=f"Head of Technical Events {i}", date_range="Aug. 2023 - May 2025",
+                organization="IEEE Student Branch, VIT", location="Vellore, Tamil Nadu",
+                bullets=[
+                    "Led a 12-person team running a 36-hour hackathon for 400 participants.",
+                    "Secured sponsorship from three companies and managed the event budget.",
+                ],
+            )
+            for i in (1,)
+        ],
+        achievements=[
+            # Long enough to wrap onto a second line - the realistic worst
+            # case, and the one that decided the budget.
+            ResumeAchievement(
+                title="Winner, Smart India Hackathon 2024 (Software Edition)",
+                description="Ranked first of 400 teams in the national grand finale "
+                "for an offline-first crop disease detector used by farmer co-operatives",
+                date="Mar. 2024",
+            ),
+            ResumeAchievement(title="Knight, LeetCode", description="Contest rating 1950",
+                              date="2024"),
+            ResumeAchievement(title="Finalist, Flipkart GRiD 5.0", description="",
+                              date="Aug. 2023"),
         ],
         selection_rationale="Chosen because the role asks for production Python.",
     )
@@ -195,3 +224,33 @@ def test_special_characters_survive_compilation():
     text = PdfReader(BytesIO(latex_renderer.render_pdf(payload))).pages[0].extract_text()
     for expected in ("R&D", "A & B Co.", "50%", "C#", "C++", "$10", "unit_test"):
         assert expected in text, f"{expected!r} did not survive compilation"
+
+
+def test_the_worst_case_respects_its_own_caps(worst_case):
+    """The fixture must actually be the largest thing one-page mode allows,
+    or the one-page assertion above proves less than it claims."""
+    limits = ai_service.ONE_PAGE
+    trimmed = ai_service.enforce_one_page(worst_case.model_copy(deep=True), limits)
+    assert trimmed == worst_case
+    assert len(worst_case.extracurriculars) == limits.extracurriculars
+    assert len(worst_case.achievements) == limits.achievements
+
+
+def test_multi_page_mode_is_allowed_to_run_longer(worst_case):
+    """When the student opts in, a resume larger than one page compiles
+    cleanly onto more pages rather than failing or being squeezed."""
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    big = worst_case.model_copy(deep=True)
+    big.experience = [_entry(i) for i in range(1, 5)]
+    big.extracurriculars = big.extracurriculars * 4
+    big.achievements = big.achievements * 3
+    big = ai_service.enforce_one_page(big, ai_service.MULTI_PAGE)
+
+    reader = PdfReader(BytesIO(latex_renderer.render_pdf(big)))
+    assert len(reader.pages) >= 2
+    text = " ".join(page.extract_text() or "" for page in reader.pages)
+    assert "Achievements" in text
+    assert "Extracurricular Activities" in text

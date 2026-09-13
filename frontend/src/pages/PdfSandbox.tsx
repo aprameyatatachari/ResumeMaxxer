@@ -112,6 +112,28 @@ const SAMPLE: ResumePayload = {
     },
     { category: 'Libraries', items: 'pandas, NumPy, SQLAlchemy, pytest, Redis' },
   ],
+  // The optional sections at their one-page budgets (ai_service.ONE_PAGE).
+  extracurriculars: [
+    {
+      title: 'Head of Technical Events',
+      date_range: 'Aug. 2023 - May 2025',
+      organization: 'IEEE Student Branch, VIT',
+      location: 'Vellore, Tamil Nadu',
+      bullets: [
+        'Led a 12-person team running a 36-hour hackathon for 400 participants.',
+        'Secured sponsorship from three companies and managed the event budget.',
+      ],
+    },
+  ],
+  achievements: [
+    {
+      title: 'Winner, Smart India Hackathon',
+      description: '1st of 400 teams, national round',
+      date: 'Mar. 2024',
+    },
+    { title: 'Knight, LeetCode', description: 'Contest rating 1950', date: '2024' },
+    { title: 'Finalist, Flipkart GRiD 5.0', description: '', date: 'Aug. 2023' },
+  ],
 }
 
 export default function PdfSandbox() {

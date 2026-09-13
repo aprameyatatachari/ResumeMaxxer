@@ -34,11 +34,14 @@ function fromExperience(experience: Experience): FormState {
 
 /** The role form, shared by "add" and "edit" so the two can never drift. */
 function ExperienceForm({
+  idPrefix,
   initial,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
+  /** Keeps field ids unique when both sections have a form open. */
+  idPrefix: string
   initial: FormState
   submitLabel: string
   onSubmit: (payload: ExperienceInput) => Promise<void>
@@ -80,11 +83,11 @@ function ExperienceForm({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="exp-title">
+          <label className="label" htmlFor={`${idPrefix}-title`}>
             Title
           </label>
           <input
-            id="exp-title"
+            id={`${idPrefix}-title`}
             className="input"
             required
             value={form.title}
@@ -93,11 +96,11 @@ function ExperienceForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="exp-org">
+          <label className="label" htmlFor={`${idPrefix}-org`}>
             Organization
           </label>
           <input
-            id="exp-org"
+            id={`${idPrefix}-org`}
             className="input"
             required
             value={form.organization}
@@ -106,11 +109,11 @@ function ExperienceForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="exp-location">
+          <label className="label" htmlFor={`${idPrefix}-location`}>
             Location
           </label>
           <input
-            id="exp-location"
+            id={`${idPrefix}-location`}
             className="input"
             value={form.location}
             onChange={(event) => update('location', event.target.value)}
@@ -118,11 +121,11 @@ function ExperienceForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="exp-start">
+          <label className="label" htmlFor={`${idPrefix}-start`}>
             Started
           </label>
           <input
-            id="exp-start"
+            id={`${idPrefix}-start`}
             type="date"
             className="input"
             required
@@ -131,11 +134,11 @@ function ExperienceForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="exp-end">
+          <label className="label" htmlFor={`${idPrefix}-end`}>
             Ended <span className="text-slate-400">(blank = current)</span>
           </label>
           <input
-            id="exp-end"
+            id={`${idPrefix}-end`}
             type="date"
             className="input"
             value={form.end_date}
@@ -143,17 +146,17 @@ function ExperienceForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="exp-type">
+          <label className="label" htmlFor={`${idPrefix}-type`}>
             Type
           </label>
           <select
-            id="exp-type"
+            id={`${idPrefix}-type`}
             className="input"
             value={form.type}
             onChange={(event) => update('type', event.target.value as ExperienceType)}
           >
             <option value="WORK">Work / Internship</option>
-            <option value="EXTRACURRICULAR">Club / Leadership</option>
+            <option value="EXTRACURRICULAR">Extracurricular (club, society, volunteering)</option>
           </select>
         </div>
       </div>
@@ -169,27 +172,63 @@ function ExperienceForm({
   )
 }
 
-/** Jobs, internships, clubs and leadership roles, each with its bullets. */
+/** Wording that differs between the two sections this component renders. */
+const COPY: Record<
+  ExperienceType,
+  { heading: string; add: string; save: string; empty: string; drag: string }
+> = {
+  WORK: {
+    heading: 'Experience',
+    add: 'Add role',
+    save: 'Save role',
+    empty: 'No roles yet. Add jobs and internships.',
+    drag: 'experience',
+  },
+  EXTRACURRICULAR: {
+    heading: 'Extracurricular activities',
+    add: 'Add activity',
+    save: 'Save activity',
+    empty:
+      'No activities yet. Clubs, societies, fests, sports and volunteering go here - they get their own section on your resume.',
+    drag: 'extracurricular',
+  },
+}
+
+/**
+ * One kind of role - work, or extracurricular - each entry with its bullets.
+ *
+ * Both kinds live in the same table (an Experience with a `type`), because
+ * they have the same shape, but they are separate sections on the resume, so
+ * the vault shows them as separate sections too. The type picker in the form
+ * still lets an entry move between them.
+ */
 export default function ExperienceSection({
+  kind,
   experiences,
   groupedBullets,
   onChange,
 }: {
+  kind: ExperienceType
+  /** Every experience in the vault, both kinds, in stored order. */
   experiences: Experience[]
   groupedBullets: Map<string, Bullet[]>
   onChange: () => void
 }) {
   const api = useApi()
+  const copy = COPY[kind]
+  const shown = experiences.filter((experience) => experience.type === kind)
+  const others = experiences.filter((experience) => experience.type !== kind)
   // One form at a time, so field ids never collide on the page.
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  /** Save a new order. The list re-renders from the server response, so a
-   *  failed save simply leaves the old order on screen. */
+  /** Save a new order for this section. The endpoint takes every experience
+   *  of both kinds, so the other section's entries ride along unchanged. The
+   *  list re-renders from the server, so a failed save leaves the old order. */
   async function move(ids: number[]) {
     try {
-      await api.reorderExperience(ids)
+      await api.reorderExperience([...ids, ...others.map((experience) => experience.id)])
       onChange()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reorder.')
@@ -209,7 +248,7 @@ export default function ExperienceSection({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">Experience</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{copy.heading}</h2>
         <button
           type="button"
           className="btn-secondary"
@@ -218,7 +257,7 @@ export default function ExperienceSection({
             setAdding((value) => !value)
           }}
         >
-          {adding ? 'Cancel' : 'Add role'}
+          {adding ? 'Cancel' : copy.add}
         </button>
       </div>
 
@@ -232,8 +271,9 @@ export default function ExperienceSection({
 
       {adding && (
         <ExperienceForm
-          initial={EMPTY}
-          submitLabel="Save role"
+          idPrefix={copy.drag}
+          initial={{ ...EMPTY, type: kind }}
+          submitLabel={copy.save}
           onSubmit={async (payload) => {
             await api.createExperience(payload)
             setAdding(false)
@@ -244,18 +284,19 @@ export default function ExperienceSection({
       )}
 
       <div className="space-y-3">
-        {experiences.map((experience, index) => (
+        {shown.map((experience, index) => (
           <SortableCard
             key={experience.id}
-            type="experience"
+            type={copy.drag}
             index={index}
-            onDrop={(from, to) => void move(movedIds(experiences, from, to))}
+            onDrop={(from, to) => void move(movedIds(shown, from, to))}
             className="card"
           >
             {editingId === experience.id ? (
               // Editing swaps only the details; the bullets below stay
               // editable in their own right.
               <ExperienceForm
+          idPrefix={copy.drag}
                 initial={fromExperience(experience)}
                 submitLabel="Save changes"
                 onSubmit={async (payload) => {
@@ -271,8 +312,8 @@ export default function ExperienceSection({
                   <MoveButtons
                     name={`${experience.title} at ${experience.organization}`}
                     index={index}
-                    count={experiences.length}
-                    onMove={(from, to) => void move(movedIds(experiences, from, to))}
+                    count={shown.length}
+                    onMove={(from, to) => void move(movedIds(shown, from, to))}
                   />
                   <div>
                     <h3 className="font-semibold text-slate-900">
@@ -283,8 +324,7 @@ export default function ExperienceSection({
                     </h3>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {experience.start_date} → {experience.end_date ?? 'Present'}
-                      {experience.location && ` · ${experience.location}`} ·{' '}
-                      {experience.type === 'WORK' ? 'Work' : 'Extracurricular'}
+                      {experience.location && ` · ${experience.location}`}
                     </p>
                   </div>
                 </div>
@@ -320,10 +360,8 @@ export default function ExperienceSection({
           </SortableCard>
         ))}
 
-        {experiences.length === 0 && !adding && (
-          <p className="text-sm text-slate-500">
-            No roles yet. Add jobs, internships and club positions.
-          </p>
+        {shown.length === 0 && !adding && (
+          <p className="text-sm text-slate-500">{copy.empty}</p>
         )}
       </div>
     </section>

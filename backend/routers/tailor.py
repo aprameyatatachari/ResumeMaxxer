@@ -50,11 +50,13 @@ from auth import get_current_user
 from database import get_session
 from gemini_key import get_student_api_key
 from models import (
+    Achievement,
     Bullet,
     Education,
     EducationLevel,
     EntityType,
     Experience,
+    ExperienceType,
     GeneratedResume,
     ProfileLink,
     Project,
@@ -66,7 +68,9 @@ from schemas import (
     GeneratedResumeSummary,
     JobDescriptionSource,
     QuotaStatus,
+    ResumeAchievement,
     ResumeEducation,
+    ResumeExperience,
     ResumeHeader,
     ResumeLink,
     ResumePayload,
@@ -337,6 +341,47 @@ def build_header(user: User, links: Sequence[ProfileLink]) -> ResumeHeader:
     )
 
 
+def _role_key(organization: str, date_range: str) -> str:
+    return f"{_normalise(organization)}|{_normalise(date_range)}"
+
+
+def _separate_extracurriculars(
+    resume: ResumePayload, experiences: Sequence[Experience]
+) -> ResumePayload:
+    """Put each role in the section its vault type says, whatever the model did.
+
+    The prompt keeps the two lists apart, but a club role landing under
+    Experience - or an internship under Extracurricular Activities - would
+    misrepresent the student, so the type is enforced here. Matched on
+    organisation and dates, which the model copies verbatim.
+    """
+    extracurricular_keys = {
+        _role_key(e.organization, _format_date_range(e.start_date, e.end_date))
+        for e in experiences
+        if e.type is ExperienceType.EXTRACURRICULAR
+    }
+    work_keys = {
+        _role_key(e.organization, _format_date_range(e.start_date, e.end_date))
+        for e in experiences
+        if e.type is not ExperienceType.EXTRACURRICULAR
+    }
+    def is_extracurricular(entry: ResumeExperience, placed_there: bool) -> bool:
+        key = _role_key(entry.organization, entry.date_range)
+        if key in extracurricular_keys:
+            return True
+        if key in work_keys:
+            return False
+        # No vault match to go by: keep the model's placement.
+        return placed_there
+
+    placed = [(e, False) for e in resume.experience] + [
+        (e, True) for e in resume.extracurriculars
+    ]
+    resume.experience = [e for e, there in placed if not is_extracurricular(e, there)]
+    resume.extracurriculars = [e for e, there in placed if is_extracurricular(e, there)]
+    return resume
+
+
 def _apply_vault_order(
     resume: ResumePayload,
     experiences: Sequence[Experience],
@@ -360,14 +405,16 @@ def _apply_vault_order(
         org_rank.setdefault(_normalise(row.organization), index)
 
     last = len(experiences)
-    resume.experience = sorted(
-        resume.experience,
-        key=lambda e: rank(
+
+    def role_order(entry: ResumeExperience) -> int:
+        return rank(
             role_rank,
-            f"{_normalise(e.organization)}|{_normalise(e.date_range)}",
-            rank(org_rank, _normalise(e.organization), last),
-        ),
-    )
+            f"{_normalise(entry.organization)}|{_normalise(entry.date_range)}",
+            rank(org_rank, _normalise(entry.organization), last),
+        )
+
+    resume.experience = sorted(resume.experience, key=role_order)
+    resume.extracurriculars = sorted(resume.extracurriculars, key=role_order)
 
     project_rank: dict[str, int] = {}
     for index, row in enumerate(projects):
@@ -472,6 +519,7 @@ def _build_vault_context(
         relevant = [
             row for row in rows if bullets_by_key.get((entity_type.value, row.id))
         ]
+        # `rows` arrive in the student's order; `relevant` keeps it.
         if not relevant:
             return
         sections.append(f"\n## {heading}")
@@ -483,7 +531,6 @@ def _build_vault_context(
                 sections.append(
                     f"  date_range: {_format_date_range(row.start_date, row.end_date)}"
                 )
-                sections.append(f"  kind: {row.type.value}")
             else:
                 sections.append(f"- name: {row.title}")
                 sections.append(f"  tech_stack: {row.tech_stack or ''}")
@@ -495,8 +542,19 @@ def _build_vault_context(
                 if bullet.tags:
                     sections.append(f"      (tags: {bullet.tags})")
 
-    render_entries("EXPERIENCE", experiences, EntityType.EXPERIENCE)
+    # Work and extracurricular roles share a table but are separate resume
+    # sections, so the model sees them as separate lists.
+    render_entries(
+        "EXPERIENCE",
+        [e for e in experiences if e.type is not ExperienceType.EXTRACURRICULAR],
+        EntityType.EXPERIENCE,
+    )
     render_entries("PROJECTS", projects, EntityType.PROJECT)
+    render_entries(
+        "EXTRACURRICULARS",
+        [e for e in experiences if e.type is ExperienceType.EXTRACURRICULAR],
+        EntityType.EXPERIENCE,
+    )
 
     return "\n".join(sections)
 
@@ -566,6 +624,11 @@ async def tailor_resume(
     ),
     job_title: Optional[str] = Form(
         default=None, description="Optional override; otherwise inferred from the JD."
+    ),
+    allow_multiple_pages: bool = Form(
+        default=False,
+        description="The student has agreed the resume may run past one page. "
+        "Off by default: one page is the convention for students.",
     ),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -698,6 +761,21 @@ async def tailor_resume(
         logger.info("No keyword overlap for user %s; using full vault", current_user.id)
         shortlist = list(all_bullets)[:MAX_SHORTLISTED_BULLETS]
 
+    # Extracurricular roles are judged on leadership and initiative, which
+    # keyword matching against the JD cannot see - left to the filter, the
+    # section would almost always come out empty. Their bullets always go to
+    # the model, which decides whether any are worth including.
+    extracurricular_ids = {
+        e.id for e in experiences if e.type is ExperienceType.EXTRACURRICULAR
+    }
+    shortlisted_ids = {b.id for b in shortlist}
+    shortlist += [
+        b for b in all_bullets
+        if b.entity_type is EntityType.EXPERIENCE
+        and b.entity_id in extracurricular_ids
+        and b.id not in shortlisted_ids
+    ]
+
     bullets_by_key: dict[tuple[str, int], list[Bullet]] = {}
     for bullet in shortlist:
         bullets_by_key.setdefault(
@@ -712,7 +790,8 @@ async def tailor_resume(
         bullets_by_key=bullets_by_key,
     )
 
-    # --- Step 3: rewrite into a one-page resume --------------------------
+    # --- Step 3: rewrite into a resume ----------------------------------
+    limits = ai_service.MULTI_PAGE if allow_multiple_pages else ai_service.ONE_PAGE
     student_name = f"{current_user.first_name} {current_user.last_name}".strip()
     try:
         resume = ai_service.tailor_resume(
@@ -722,6 +801,7 @@ async def tailor_resume(
             student_email=current_user.email,
             qualifications_block=qualifications_block,
             api_key=student_api_key,
+            limits=limits,
         )
     except ai_service.InvalidApiKeyError as exc:
         raise HTTPException(
@@ -739,7 +819,20 @@ async def tailor_resume(
     # The model picks which roles and projects fit; the student decides their
     # order. And the header is built from the student's own choices of what to
     # show, so a hidden phone number cannot reappear.
+    resume = _separate_extracurriculars(resume, experiences)
     resume = _apply_vault_order(resume, experiences, projects)
+    # Achievements are printed as the student wrote them, in their order. Never
+    # sent through the model: rewording a claimed result is where embellishment
+    # happens.
+    resume.achievements = [
+        ResumeAchievement(title=a.title, description=a.description, date=a.date_text)
+        for a in session.exec(
+            select(Achievement)
+            .where(Achievement.user_id == current_user.id)
+            .order_by(Achievement.position, Achievement.id)
+        ).all()
+        if a.include_on_resume
+    ]
     resume.header = build_header(
         current_user,
         session.exec(
@@ -748,6 +841,9 @@ async def tailor_resume(
             .order_by(ProfileLink.position, ProfileLink.id)
         ).all(),
     )
+    # Moving entries between sections and adding achievements can change the
+    # counts, so apply the page budget once more.
+    resume = ai_service.enforce_one_page(resume, limits)
 
     # --- Step 4: store the snapshot --------------------------------------
     title = job_title or analysis.job_title or "Untitled Role"
