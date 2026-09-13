@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef } from 'react'
 
 const GLYPHS = 'abcdeghknopqrsuvxyz0123456789' // narrow glyphs, so rolling letters stay inside their slot
-const STEP_MS = 50 // how often an unsettled letter rolls to a new glyph
-const SPIN_MS = 220 // how long the first letter rolls before it settles
-const CLICK_MS = 300 // length of the settle animation (matches index.css)
+const STEP_MS = 55 // how often an unsettled letter rolls to a new glyph
+const SPIN_MS = 380 // how long the first letter rolls before it settles
+const CLICK_MS = 420 // length of the settle animation (matches index.css)
 const TOTAL_MS = 1000 // the whole headline is set within this
-const MAX_STAGGER_MS = 30
+const MAX_STAGGER_MS = 32
 
 /**
  * A headline that unlocks like a combination dial.
