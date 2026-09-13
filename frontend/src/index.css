@@ -466,14 +466,66 @@
   .loom-thread, .loom-line { animation: none; }
 }
 
-/* --- Hero image settle ---------------------------------------------------- */
-.hero-image {
+/* --- Scroll into the vault ---------------------------------------------- */
+.vault-shade {
+  background: linear-gradient(90deg, #090a0c 0%, rgb(9 10 12 / 0.92) 30%, rgb(9 10 12 / 0.35) 60%, transparent 80%);
+}
+@media (max-width: 767px) {
+  .vault-shade {
+    background: linear-gradient(180deg, rgb(9 10 12 / 0.55) 0%, rgb(9 10 12 / 0.9) 60%, #090a0c 100%);
+  }
+}
+.vault-stage .vault-shade {
+  opacity: var(--shade, 1);
+}
+.vault-door-image {
+  object-position: 72% center;
+  transform-origin: var(--seam-x) var(--seam-y);
+  transform: scale(var(--door-scale, 1));
+  opacity: var(--door-opacity, 1);
+  will-change: transform, opacity;
   animation: hero-settle 2400ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-@keyframes hero-settle {
-  from { transform: scale(1.08); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+@media (max-width: 767px) {
+  .vault-door-image { transform-origin: 62% var(--seam-y); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .hero-image { animation: none; }
+.vault-inside {
+  transform: scale(var(--inside-scale, 1.25));
+  opacity: var(--inside-opacity, 0);
+  will-change: transform, opacity;
+}
+.vault-flare {
+  pointer-events: none;
+  opacity: var(--flare, 0);
+  background:
+    radial-gradient(circle at var(--seam-x) var(--seam-y), #ffffff 0%, #ffdaa0 14%, rgb(255 137 100 / 0.85) 32%, rgb(86 131 218 / 0.45) 58%, transparent 80%);
+  mix-blend-mode: screen;
+}
+.vault-title {
+  transform: translateY(var(--title-y, 0));
+  opacity: var(--title-opacity, 1);
+}
+.vault-rise {
+  transform: translateY(var(--rise-y, 30vh));
+  opacity: var(--rise-opacity, 0);
+}
+.vault-stage[data-phase='inside'] .vault-title,
+.vault-stage:not([data-phase='inside']) .vault-rise {
+  visibility: hidden;
+}
+.vault-stage[data-phase='moving'] .vault-title,
+.vault-stage[data-phase='moving'] .vault-rise {
+  visibility: visible;
+  pointer-events: none;
+}
+.vault-cue {
+  animation: vault-cue 1800ms ease-in-out infinite;
+}
+@keyframes vault-cue {
+  0%, 100% { transform: translateY(-6px); opacity: 0.4; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+@keyframes hero-settle {
+  from { scale: 1.08; filter: brightness(0); }
+  to { scale: 1; filter: brightness(1); }
 }
