@@ -557,7 +557,10 @@ async def tailor_resume(
     source = JobDescriptionSource(
         filename=file.filename or "job-description",
         char_count=len(jd_text),
-        preview=jd_text[:600],
+        # The whole extracted text, not an excerpt: the student checks it
+        # against their file, and a 600-character excerpt ending in an
+        # ellipsis read as 'the app only read this much'.
+        preview=jd_text,
         qualifications_heading=qualifications.heading if qualifications else "",
         required_qualifications=qualifications.required if qualifications else [],
         preferred_qualifications=qualifications.preferred if qualifications else [],

@@ -209,3 +209,21 @@ def test_tailoring_applies_both_guardrails(gemini, monkeypatch):
     assert len(result.education) == ai_service.MAX_EDUCATION
     # ...and the invented metric is gone.
     assert "90%" not in result.experience[0].bullets[0]
+
+
+def test_the_whole_job_description_reaches_the_prompt(monkeypatch):
+    """No silent truncation between the parser and Gemini."""
+    seen = {}
+
+    def capture(*, prompt, **_kwargs):
+        seen["prompt"] = prompt
+        return JDAnalysis(**ANALYSIS_JSON)
+
+    monkeypatch.setattr(ai_service, "_generate_structured", capture)
+    jd = "x " * 30_000 + "TAIL-MARKER"
+    quals = "- requirement\n" * 1_000 + "QUALS-TAIL"
+
+    ai_service.analyse_job_description(jd, qualifications_block=quals)
+
+    assert "TAIL-MARKER" in seen["prompt"]
+    assert "QUALS-TAIL" in seen["prompt"]
