@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 
 const GLYPHS = 'abcdeghknopqrsuvxyz0123456789' // narrow glyphs, so rolling letters stay inside their slot
 const STEP_MS = 55 // how often an unsettled letter rolls to a new glyph
-const ROLL_MS = 200 // how long each letter rolls after it appears
+const ROLL_MS = 350 // how long the whole line scrambles before the first letter sets
 const CLICK_MS = 240 // length of the settle animation (matches index.css)
 const TOTAL_MS = 1300 // the whole headline is set within this
 const MAX_STAGGER_MS = 55
@@ -10,8 +10,8 @@ const MAX_STAGGER_MS = 55
 /**
  * A headline that unlocks like a combination dial.
  *
- * On entering the viewport the letters appear one by one from left to right;
- * each rolls through a few random characters before clicking into place.
+ * On entering the viewport the whole line appears at once as rolling random
+ * characters, then the letters click into place one by one, left to right.
  * Plays again each time the heading scrolls back into view. The whole
  * headline is set within 1.3 seconds however long it is, and letters start
  * hidden (set before first paint) so the real text never flashes first.
@@ -79,7 +79,7 @@ export default function DialText({
         const t = now - start
         let done = true
         glyphs.forEach((el, i) => {
-          const appearAt = i * stagger
+          const appearAt = 0
           if (el.classList.contains('is-hidden')) {
             done = false
             if (t < appearAt) return
@@ -87,7 +87,7 @@ export default function DialText({
             el.classList.add('is-rolling')
           }
           if (!el.classList.contains('is-rolling')) return
-          if (t >= appearAt + ROLL_MS) {
+          if (t >= ROLL_MS + i * stagger) {
             el.textContent = finals[i]
             el.classList.remove('is-rolling')
             // Restart the click animation.
