@@ -2,19 +2,19 @@ import { useLayoutEffect, useRef } from 'react'
 
 const GLYPHS = 'abcdeghknopqrsuvxyz0123456789' // narrow glyphs, so rolling letters stay inside their slot
 const STEP_MS = 55 // how often an unsettled letter rolls to a new glyph
-const SPIN_MS = 380 // how long the first letter rolls before it settles
-const CLICK_MS = 420 // length of the settle animation (matches index.css)
+const ROLL_MS = 160 // how long each letter rolls after it appears
+const CLICK_MS = 240 // length of the settle animation (matches index.css)
 const TOTAL_MS = 1000 // the whole headline is set within this
-const MAX_STAGGER_MS = 32
+const MAX_STAGGER_MS = 45
 
 /**
  * A headline that unlocks like a combination dial.
  *
- * On entering the viewport every letter rolls through random characters, and
- * they click into place one by one from left to right. Plays again each time
- * the heading scrolls back into view. The whole headline is set within one
- * second however long it is, and letters start scrambled (set before first
- * paint) so the real text never flashes before the roll.
+ * On entering the viewport the letters appear one by one from left to right;
+ * each rolls through a few random characters before clicking into place.
+ * Plays again each time the heading scrolls back into view. The whole
+ * headline is set within one second however long it is, and letters start
+ * hidden (set before first paint) so the real text never flashes first.
  *
  * - Each letter keeps the width of its final character (an invisible copy
  *   sizes the box), so rolling glyphs never reflow the line.
@@ -47,14 +47,13 @@ export default function DialText({
     let playing = false
     const stagger = Math.min(
       MAX_STAGGER_MS,
-      (TOTAL_MS - SPIN_MS - CLICK_MS) / Math.max(glyphs.length - 1, 1),
+      (TOTAL_MS - ROLL_MS - CLICK_MS) / Math.max(glyphs.length - 1, 1),
     )
     const randomGlyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0]
     const scramble = () => {
       glyphs.forEach((el) => {
-        el.classList.remove('is-set')
-        el.classList.add('is-rolling')
-        el.textContent = randomGlyph()
+        el.classList.remove('is-set', 'is-rolling')
+        el.classList.add('is-hidden')
       })
     }
     scramble()
@@ -62,7 +61,7 @@ export default function DialText({
     const settleAll = () => {
       glyphs.forEach((el, i) => {
         el.textContent = finals[i]
-        el.classList.remove('is-rolling')
+        el.classList.remove('is-rolling', 'is-hidden')
       })
     }
 
@@ -72,16 +71,23 @@ export default function DialText({
       const start = performance.now()
       const lastStep = new Array(glyphs.length).fill(-1)
       glyphs.forEach((el) => {
-        el.classList.remove('is-set')
-        el.classList.add('is-rolling')
+        el.classList.remove('is-set', 'is-rolling')
+        el.classList.add('is-hidden')
       })
 
       const tick = (now: number) => {
         const t = now - start
         let done = true
         glyphs.forEach((el, i) => {
+          const appearAt = i * stagger
+          if (el.classList.contains('is-hidden')) {
+            done = false
+            if (t < appearAt) return
+            el.classList.remove('is-hidden')
+            el.classList.add('is-rolling')
+          }
           if (!el.classList.contains('is-rolling')) return
-          if (t >= SPIN_MS + i * stagger) {
+          if (t >= appearAt + ROLL_MS) {
             el.textContent = finals[i]
             el.classList.remove('is-rolling')
             // Restart the click animation.
