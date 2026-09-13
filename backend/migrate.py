@@ -139,9 +139,31 @@ def _add_missing_columns(engine) -> tuple[list[str], list[str]]:
             if table_name not in live_tables:
                 continue  # create_all just made it; nothing to reconcile
 
-            existing = {c["name"] for c in inspector.get_columns(table_name)}
+            live_columns = {c["name"]: c for c in inspector.get_columns(table_name)}
+            existing = set(live_columns)
             for column in table.columns:
                 if column.name in existing:
+                    # The one in-place change that is safe to automate: a
+                    # column the model now allows to be NULL. Dropping NOT NULL
+                    # loses nothing and every existing row still satisfies it.
+                    # Tightening in the other direction could fail on existing
+                    # rows, so that stays manual. SQLite cannot ALTER a column
+                    # at all; it only ever sees fresh create_all schemas here.
+                    if (
+                        column.nullable
+                        and not column.primary_key
+                        and not live_columns[column.name].get("nullable", True)
+                        and engine.dialect.name != "sqlite"
+                    ):
+                        logger.info(
+                            "ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL",
+                            table_name, column.name,
+                        )
+                        connection.execute(text(
+                            f"ALTER TABLE {table_name} ALTER COLUMN {column.name} "
+                            "DROP NOT NULL"
+                        ))
+                        added.append(f"{table_name}.{column.name} (now nullable)")
                     continue
                 try:
                     ddl = _column_ddl(column, engine.dialect)

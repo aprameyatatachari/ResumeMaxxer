@@ -96,7 +96,7 @@ class EducationBase(BaseModel):
     stream: Optional[Stream] = None
     degree: Optional[str] = Field(default=None, max_length=255)
 
-    start_year: int = Field(ge=1950, le=2100)
+    start_year: Optional[int] = Field(default=None, ge=1950, le=2100)
     end_year: Optional[int] = Field(default=None, ge=1950, le=2100)
     start_month: Optional[int] = Field(default=None, ge=1, le=12)
     end_month: Optional[int] = Field(default=None, ge=1, le=12)
@@ -105,6 +105,15 @@ class EducationBase(BaseModel):
     score_type: Optional[ScoreType] = None
 
     coursework: str = ""
+
+    # SCHOOL only - the results taken at this school. See models.Education.
+    class10_board: Optional[Board] = None
+    class10_score: Optional[str] = Field(default=None, max_length=20)
+    class10_score_type: Optional[ScoreType] = None
+    class12_board: Optional[Board] = None
+    class12_stream: Optional[Stream] = None
+    class12_score: Optional[str] = Field(default=None, max_length=20)
+    class12_score_type: Optional[ScoreType] = None
 
 
 class EducationCreate(EducationBase):
@@ -116,6 +125,12 @@ class EducationCreate(EducationBase):
         deliberate: a silently ignored `stream` on a Class X row would look
         like a frontend bug that "sometimes doesn't save".
         """
+        school_result_fields = (
+            self.class10_board, self.class10_score, self.class10_score_type,
+            self.class12_board, self.class12_stream, self.class12_score,
+            self.class12_score_type,
+        )
+
         if self.level in SCHOOL_LEVELS:
             if not self.board:
                 raise ValueError("board is required for Class X and Class XII")
@@ -125,10 +140,48 @@ class EducationCreate(EducationBase):
                 raise ValueError(
                     "school entries are recorded by year only - omit the months"
                 )
+            # A board result is one moment, and the resume shows only its year.
+            if self.start_year is not None:
+                raise ValueError(
+                    "Class X and XII record only the year of passing - omit "
+                    "start_year, or use a School entry for the full tenure"
+                )
+            if self.end_year is None:
+                raise ValueError("the year of passing (end_year) is required")
             if self.level is EducationLevel.CLASS_10 and self.stream:
                 raise ValueError("Class X has a common curriculum, so no stream")
             if self.level is EducationLevel.CLASS_12 and not self.stream:
                 raise ValueError("stream is required for Class XII")
+            if any(school_result_fields):
+                raise ValueError("class10_* / class12_* apply to School entries only")
+
+        elif self.level is EducationLevel.SCHOOL:
+            if self.board or self.stream or self.degree or self.score or self.score_type:
+                raise ValueError(
+                    "a School entry keeps its results in class10_* / class12_*, "
+                    "not in board, stream, degree or score"
+                )
+            if self.start_month or self.end_month or self.coursework:
+                raise ValueError("a School entry takes years only and no coursework")
+            if self.start_year is None:
+                raise ValueError("start_year is required for a School entry")
+            if not self.class10_board and not self.class12_board:
+                raise ValueError(
+                    "a School entry needs at least one result: Class X or Class XII"
+                )
+            for label, board, score, score_type in (
+                ("Class X", self.class10_board, self.class10_score, self.class10_score_type),
+                ("Class XII", self.class12_board, self.class12_score, self.class12_score_type),
+            ):
+                if (score or score_type) and not board:
+                    raise ValueError(f"{label} needs a board before a score")
+                if score and not score_type:
+                    raise ValueError(f"{label} score needs a score type")
+            if self.class12_board and not self.class12_stream:
+                raise ValueError("stream is required for Class XII")
+            if self.class12_stream and not self.class12_board:
+                raise ValueError("Class XII needs a board before a stream")
+
         else:  # HIGHER_ED
             if not self.degree:
                 raise ValueError("degree is required for higher education")
@@ -136,8 +189,16 @@ class EducationCreate(EducationBase):
                 raise ValueError(
                     "board and stream apply to school entries, not a degree"
                 )
+            if self.start_year is None:
+                raise ValueError("start_year is required for higher education")
+            if any(school_result_fields):
+                raise ValueError("class10_* / class12_* apply to School entries only")
 
-        if self.end_year is not None and self.end_year < self.start_year:
+        if (
+            self.start_year is not None
+            and self.end_year is not None
+            and self.end_year < self.start_year
+        ):
             raise ValueError("end year cannot be before start year")
 
         # A score without its unit is unreadable on a resume - "8.7" could be
@@ -168,6 +229,13 @@ class EducationUpdate(BaseModel):
     score: Optional[str] = Field(default=None, max_length=20)
     score_type: Optional[ScoreType] = None
     coursework: Optional[str] = None
+    class10_board: Optional[Board] = None
+    class10_score: Optional[str] = Field(default=None, max_length=20)
+    class10_score_type: Optional[ScoreType] = None
+    class12_board: Optional[Board] = None
+    class12_stream: Optional[Stream] = None
+    class12_score: Optional[str] = Field(default=None, max_length=20)
+    class12_score_type: Optional[ScoreType] = None
 
 
 class EducationRead(EducationBase):
@@ -504,6 +572,11 @@ class ResumeEducation(BaseModel):
     )
     date_range: str = Field(
         description="Copy verbatim from the vault, e.g. 'Aug. 2022 - May 2026'."
+    )
+    highlights: list[str] = Field(
+        default_factory=list,
+        description="Bullets under the heading. Used by a School entry for its "
+        "Class X / XII results; copy verbatim from the vault, otherwise empty.",
     )
 
 

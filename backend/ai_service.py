@@ -532,14 +532,15 @@ Instructions:
 3. REWRITE each selected bullet to mirror the job description's language,
    without claiming anything the vault does not support.
 
-4. EDUCATION: copy `institution`, `location`, `score` and `date_range` from the
-   vault verbatim - do not reformat or recalculate them. Build `qualification`
-   as follows:
-   - degree      -> the degree name, e.g. "B.E. Computer Science"
-   - Class XII   -> "<BOARD> - Class XII (<STREAM>)", e.g. "CBSE - Class XII (PCMB)"
-   - Class X     -> "<BOARD> - Class X", e.g. "ICSE - Class X"
-   Order most recent first: degree, then Class XII, then Class X. Drop the
-   school rows if the student has strong work experience and space is tight.
+4. EDUCATION: copy every field of each row you keep - `institution`,
+   `location`, `qualification`, `score`, `date_range` and `highlights` -
+   verbatim from the vault. They are pre-formatted; do not reformat,
+   recalculate or reword them. Class X / XII rows show a single year of
+   passing; a School row covers a whole tenure and lists its board results
+   in `highlights`. Your only decision is which rows to keep. Order most
+   recent first. Drop school-level rows (Class X, Class XII, School) before
+   dropping the degree if space is tight and the student has strong work
+   experience.
 
 5. EXPERIENCE comes before projects and outranks them. Internships and jobs
    are what a recruiter screens on hardest, so include EVERY relevant role in

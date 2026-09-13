@@ -13,7 +13,7 @@ export type ExperienceType = 'WORK' | 'EXTRACURRICULAR'
 export type EntityType = 'EXPERIENCE' | 'PROJECT'
 
 // --- Indian education system ----------------------------------------------
-export type EducationLevel = 'CLASS_10' | 'CLASS_12' | 'HIGHER_ED'
+export type EducationLevel = 'CLASS_10' | 'CLASS_12' | 'HIGHER_ED' | 'SCHOOL'
 
 export type Board = 'CBSE' | 'ICSE' | 'STATE' | 'IB' | 'CAMBRIDGE' | 'NIOS' | 'OTHER'
 
@@ -58,6 +58,7 @@ export const LEVEL_LABELS: Record<EducationLevel, string> = {
   HIGHER_ED: 'College / University',
   CLASS_12: 'Class XII (Senior Secondary)',
   CLASS_10: 'Class X (Secondary)',
+  SCHOOL: 'School (X & XII together)',
 }
 
 export interface User {
@@ -102,13 +103,22 @@ export interface Education {
   board: Board | null
   stream: Stream | null
   degree: string | null
-  start_year: number
+  /** Null for Class X / XII, which record only the year of passing. */
+  start_year: number | null
   end_year: number | null
   start_month: number | null
   end_month: number | null
   score: string | null
   score_type: ScoreType | null
   coursework: string
+  /** SCHOOL only: the results taken at this school, shown as bullets. */
+  class10_board: Board | null
+  class10_score: string | null
+  class10_score_type: ScoreType | null
+  class12_board: Board | null
+  class12_stream: Stream | null
+  class12_score: string | null
+  class12_score_type: ScoreType | null
 }
 
 export type EducationInput = Omit<Education, 'id'>
@@ -228,6 +238,9 @@ export interface ResumeEducation {
   qualification: string
   score: string
   date_range: string
+  /** A School entry's Class X / XII results. Absent on resumes stored before
+   *  School entries existed, so treat as optional. */
+  highlights?: string[]
 }
 
 export interface ResumeExperience {

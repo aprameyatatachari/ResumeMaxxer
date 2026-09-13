@@ -32,19 +32,24 @@ const SAMPLE: ResumePayload = {
       score: 'CGPA: 8.74/10',
       date_range: 'Aug. 2022 - May 2026',
     },
+    // Two School entries - a student who changed schools after Class X. Each
+    // carries a result bullet under its heading, which makes this the tallest
+    // realistic education section and so the strictest one-page check.
     {
       institution: 'Delhi Public School',
       location: 'Bengaluru, Karnataka',
-      qualification: 'CBSE - Class XII (PCMC)',
-      score: 'Percentage: 94.2%',
+      qualification: 'CBSE - Class XII',
+      score: '',
       date_range: '2020 - 2022',
+      highlights: ['Class XII (PCMC): 94.2%'],
     },
     {
       institution: 'St. Xavier High School',
       location: 'Bengaluru, Karnataka',
       qualification: 'ICSE - Class X',
-      score: 'Percentage: 96.8%',
-      date_range: '2018 - 2020',
+      score: '',
+      date_range: '2010 - 2020',
+      highlights: ['Class X: 96.8%'],
     },
   ],
   experience: [

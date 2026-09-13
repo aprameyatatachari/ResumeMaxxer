@@ -19,7 +19,7 @@ ENTITIES = [
     pytest.param(
         "education",
         {"level": "CLASS_10", "institution": "St. Xavier", "board": "ICSE",
-         "start_year": 2018, "end_year": 2020},
+         "end_year": 2020},
         {"institution": "St. Xavier High School"},
         "institution", "St. Xavier High School",
         id="education",

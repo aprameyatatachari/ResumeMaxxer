@@ -42,17 +42,27 @@ test('the education form changes shape with the level', async ({ page }) => {
   await expect(page.getByLabel('Start month')).toBeVisible()
   await expect(page.getByLabel('Board')).toBeHidden()
 
-  // Class XII: board and stream, years only.
+  // Class XII: board and stream, and only the year of passing.
   await page.getByRole('button', { name: 'Class XII (Senior Secondary)' }).click()
   await expect(page.getByLabel('Board')).toBeVisible()
   await expect(page.getByLabel('Stream / specialisation')).toBeVisible()
   await expect(page.getByLabel('Degree')).toBeHidden()
   await expect(page.getByLabel('Start month')).toBeHidden()
+  await expect(page.getByLabel('Start year')).toBeHidden()
+  await expect(page.getByLabel('Year of passing')).toBeVisible()
 
   // Class X: a board, but no stream - the curriculum is common.
   await page.getByRole('button', { name: 'Class X (Secondary)' }).click()
   await expect(page.getByLabel('Board')).toBeVisible()
   await expect(page.getByLabel('Stream / specialisation')).toBeHidden()
+  await expect(page.getByLabel('Start year')).toBeHidden()
+
+  // School: the whole tenure, with per-exam results instead of one board.
+  await page.getByRole('button', { name: 'School (X & XII together)' }).click()
+  await expect(page.getByLabel('Start year')).toBeVisible()
+  await expect(page.getByLabel('Class XII board')).toBeVisible()
+  await expect(page.getByLabel('Class X board')).toBeVisible()
+  await expect(page.getByLabel('Board', { exact: true })).toBeHidden()
 })
 
 test('a Class XII entry records its board and stream', async ({ page }) => {
@@ -62,14 +72,53 @@ test('a Class XII entry records its board and stream', async ({ page }) => {
   await page.getByLabel('School name').fill('Delhi Public School')
   await page.getByLabel('Board').selectOption('CBSE')
   await page.getByLabel('Stream / specialisation').selectOption('PCMC')
-  await page.getByLabel('Start year').selectOption('2020')
-  await page.getByLabel('End year').selectOption('2022')
+  await page.getByLabel('Year of passing').selectOption('2022')
   await page.getByLabel('Percentage').fill('94.2')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
 
   // Rendered the way it will read on the resume.
   await expect(page.getByText('CBSE - Class XII (PCMC)')).toBeVisible()
   await expect(page.getByText('94.2%')).toBeVisible()
+  // Only the year of passing, not a range.
+  await expect(page.getByText('2022', { exact: true })).toBeVisible()
+})
+
+test('a student who changed schools adds one School entry for each', async ({ page }) => {
+  // Class X at one school...
+  await page.getByRole('button', { name: 'Add qualification' }).click()
+  await page.getByRole('button', { name: 'School (X & XII together)' }).click()
+  await page.getByLabel('School name').fill('Kendriya Vidyalaya')
+  await page.getByLabel('Start year').selectOption('2010')
+  await page.getByLabel('End year').selectOption('2020')
+  await page.getByLabel('I took Class XII at this school').uncheck()
+  await page.getByLabel('Class X board').selectOption('CBSE')
+  await page.getByLabel('Class X score').fill('96')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+  // ...and Class XII at another.
+  await page.getByRole('button', { name: 'Add qualification' }).click()
+  await page.getByRole('button', { name: 'School (X & XII together)' }).click()
+  await page.getByLabel('School name').fill('Narayana Junior College')
+  await page.getByLabel('Start year').selectOption('2020')
+  await page.getByLabel('End year').selectOption('2022')
+  await page.getByLabel('I took Class X at this school').uncheck()
+  await page.getByLabel('Class XII board').selectOption('STATE')
+  await page.getByLabel('Class XII stream').selectOption('PCM')
+  await page.getByLabel('Class XII score').fill('94.2')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+  // Each school is its own heading with its tenure, results as bullets.
+  await expect(page.getByText('Kendriya Vidyalaya')).toBeVisible()
+  await expect(page.getByText('CBSE - Class X', { exact: true })).toBeVisible()
+  await expect(page.getByText('2010 - 2020')).toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Class X: 96%' })).toBeVisible()
+
+  await expect(page.getByText('Narayana Junior College')).toBeVisible()
+  await expect(page.getByText('State Board - Class XII', { exact: true })).toBeVisible()
+  await expect(page.getByText('2020 - 2022')).toBeVisible()
+  await expect(
+    page.getByRole('listitem').filter({ hasText: 'Class XII (PCM): 94.2%' }),
+  ).toBeVisible()
 })
 
 test('an experience with bullets can be added and removed', async ({ page }) => {

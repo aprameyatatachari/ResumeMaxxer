@@ -82,7 +82,7 @@ def test_invalid_education_returns_422_not_500(client):
     """A Class XII row with no stream is rejected by the schema validator."""
     response = client.post("/api/vault/education", json={
         "level": "CLASS_12", "institution": "DPS", "board": "CBSE",
-        "start_year": 2020, "end_year": 2022,
+        "end_year": 2022,
     })
     assert response.status_code == 422
     assert "stream is required" in response.text
