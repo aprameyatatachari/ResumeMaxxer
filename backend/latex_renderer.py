@@ -488,8 +488,9 @@ def compile_pdf(latex: str) -> bytes:
 
     if response.status_code == 401:
         raise LatexRenderError(
-            "The PDF service rejected our API key. LATEX_API_KEY in "
-            "backend/.env must match API_KEY in docker-compose.yml."
+            "The PDF service rejected our API key. LATEX_API_KEY must match "
+            "the compiler's API_KEY (docker-compose.yml locally; on Vercel "
+            "the container falls back to LATEX_API_KEY when API_KEY is unset)."
         )
     if response.status_code != 200:
         # The service returns a generic message; the specific TeX error is in
