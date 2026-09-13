@@ -3,10 +3,106 @@ import { useState } from 'react'
 import { bulletsFor } from '../../hooks/useVault'
 import { useApi } from '../../hooks/useApi'
 import { ApiError } from '../../lib/api'
-import type { Bullet, Project } from '../../lib/types'
+import type { Bullet, Project, ProjectInput } from '../../lib/types'
 import Alert from '../Alert'
 import BulletList from './BulletList'
 import GitHubImportPanel from './GitHubImportPanel'
+
+/** The project form, shared by "add manually" and "edit". */
+function ProjectForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  initial: { title: string; repo_url: string; tech_stack: string }
+  submitLabel: string
+  onSubmit: (payload: ProjectInput) => Promise<void>
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await onSubmit({
+        title: form.title.trim(),
+        repo_url: form.repo_url.trim() || null,
+        tech_stack: form.tech_stack.trim(),
+      })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save that.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="card mb-3 space-y-3">
+      {error && (
+        <Alert variant="error" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="proj-title">
+            Title
+          </label>
+          <input
+            id="proj-title"
+            className="input"
+            required
+            value={form.title}
+            onChange={(event) =>
+              setForm((previous) => ({ ...previous, title: event.target.value }))
+            }
+            placeholder="Course Scheduler"
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="proj-url">
+            Link <span className="text-slate-400">(optional)</span>
+          </label>
+          <input
+            id="proj-url"
+            className="input"
+            value={form.repo_url}
+            onChange={(event) =>
+              setForm((previous) => ({ ...previous, repo_url: event.target.value }))
+            }
+            placeholder="https://…"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor="proj-stack">
+            Tech stack
+          </label>
+          <input
+            id="proj-stack"
+            className="input"
+            value={form.tech_stack}
+            onChange={(event) =>
+              setForm((previous) => ({ ...previous, tech_stack: event.target.value }))
+            }
+            placeholder="React, TypeScript, PostgreSQL"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary" disabled={busy}>
+          {busy ? 'Saving…' : submitLabel}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
 /**
  * Projects, plus the GitHub import flow.
@@ -27,9 +123,9 @@ export default function ProjectSection({
   const api = useApi()
   const [repoUrl, setRepoUrl] = useState('')
   const [importing, setImporting] = useState(false)
-  const [manual, setManual] = useState({ title: '', repo_url: '', tech_stack: '' })
   const [manualOpen, setManualOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
+  // One form at a time, so field ids never collide on the page.
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -52,26 +148,6 @@ export default function ProjectSection({
     }
   }
 
-  async function addManual(event: React.FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    setError(null)
-    try {
-      await api.createProject({
-        title: manual.title.trim(),
-        repo_url: manual.repo_url.trim() || null,
-        tech_stack: manual.tech_stack.trim(),
-      })
-      setManual({ title: '', repo_url: '', tech_stack: '' })
-      setManualOpen(false)
-      onChange()
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save that.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   async function remove(id: number) {
     try {
       await api.deleteProject(id)
@@ -88,7 +164,10 @@ export default function ProjectSection({
         <button
           type="button"
           className="btn-secondary"
-          onClick={() => setManualOpen((value) => !value)}
+          onClick={() => {
+            setEditingId(null)
+            setManualOpen((value) => !value)
+          }}
         >
           {manualOpen ? 'Cancel' : 'Add manually'}
         </button>
@@ -144,65 +223,38 @@ export default function ProjectSection({
 
       {/* --- Manual entry -------------------------------------------------- */}
       {manualOpen && (
-        <form onSubmit={addManual} className="card mb-3 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label" htmlFor="proj-title">
-                Title
-              </label>
-              <input
-                id="proj-title"
-                className="input"
-                required
-                value={manual.title}
-                onChange={(event) =>
-                  setManual((previous) => ({ ...previous, title: event.target.value }))
-                }
-                placeholder="Course Scheduler"
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="proj-url">
-                Link <span className="text-slate-400">(optional)</span>
-              </label>
-              <input
-                id="proj-url"
-                className="input"
-                value={manual.repo_url}
-                onChange={(event) =>
-                  setManual((previous) => ({ ...previous, repo_url: event.target.value }))
-                }
-                placeholder="https://…"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="label" htmlFor="proj-stack">
-                Tech stack
-              </label>
-              <input
-                id="proj-stack"
-                className="input"
-                value={manual.tech_stack}
-                onChange={(event) =>
-                  setManual((previous) => ({
-                    ...previous,
-                    tech_stack: event.target.value,
-                  }))
-                }
-                placeholder="React, TypeScript, PostgreSQL"
-              />
-            </div>
-          </div>
-          <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save project'}
-          </button>
-        </form>
+        <ProjectForm
+          initial={{ title: '', repo_url: '', tech_stack: '' }}
+          submitLabel="Save project"
+          onSubmit={async (payload) => {
+            await api.createProject(payload)
+            setManualOpen(false)
+            onChange()
+          }}
+          onCancel={() => setManualOpen(false)}
+        />
       )}
 
       {/* --- List ---------------------------------------------------------- */}
       <div className="space-y-3">
         {projects.map((project) => (
           <div key={project.id} className="card">
+            {editingId === project.id ? (
+              <ProjectForm
+                initial={{
+                  title: project.title,
+                  repo_url: project.repo_url ?? '',
+                  tech_stack: project.tech_stack,
+                }}
+                submitLabel="Save changes"
+                onSubmit={async (payload) => {
+                  await api.updateProject(project.id, payload)
+                  setEditingId(null)
+                  onChange()
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : (
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="flex items-center gap-2 font-semibold text-slate-900">
@@ -225,14 +277,28 @@ export default function ProjectSection({
                   </a>
                 )}
               </div>
-              <button
-                type="button"
-                className="btn-danger text-xs"
-                onClick={() => void remove(project.id)}
-              >
-                Delete
-              </button>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  aria-label={`Edit ${project.title}`}
+                  onClick={() => {
+                    setManualOpen(false)
+                    setEditingId(project.id)
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger text-xs"
+                  onClick={() => void remove(project.id)}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
+            )}
 
             <BulletList
               entityType="PROJECT"

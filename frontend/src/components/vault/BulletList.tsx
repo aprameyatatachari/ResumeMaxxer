@@ -27,6 +27,38 @@ export default function BulletList({
   const [tags, setTags] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [draftText, setDraftText] = useState('')
+  const [draftTags, setDraftTags] = useState('')
+
+  function startEdit(bullet: Bullet) {
+    setEditingId(bullet.id)
+    // Edit what is shown, which is the AI version when there is one.
+    setDraftText(bullet.ai_enhanced_text ?? bullet.original_text)
+    setDraftTags(bullet.tags)
+    setError(null)
+  }
+
+  async function saveEdit(id: number) {
+    if (draftText.trim() === '') {
+      setError('A bullet cannot be empty - delete it instead.')
+      return
+    }
+    try {
+      await api.updateBullet(id, {
+        original_text: draftText.trim(),
+        // The list shows the AI version when there is one, so leaving it in
+        // place would hide the edit and make it look unsaved. The student's
+        // own wording is the source of truth from here on.
+        ai_enhanced_text: null,
+        tags: draftTags.trim(),
+      })
+      setEditingId(null)
+      onChange()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save that bullet.')
+    }
+  }
 
   async function addBullet(event: React.FormEvent) {
     event.preventDefault()
@@ -64,6 +96,41 @@ export default function BulletList({
     <div className="mt-3 border-t border-slate-100 pt-3">
       <ul className="space-y-1.5">
         {bullets.map((bullet) => (
+          editingId === bullet.id ? (
+            <li key={bullet.id} className="space-y-2 rounded-lg bg-slate-50 p-2">
+              <textarea
+                className="input"
+                rows={2}
+                value={draftText}
+                onChange={(event) => setDraftText(event.target.value)}
+                aria-label="Edit bullet text"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  value={draftTags}
+                  onChange={(event) => setDraftTags(event.target.value)}
+                  aria-label="Edit tags"
+                  placeholder="Tags: python, rest api"
+                />
+                <button
+                  type="button"
+                  className="btn-primary shrink-0 text-xs"
+                  onClick={() => void saveEdit(bullet.id)}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0 text-xs"
+                  onClick={() => setEditingId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ) : (
           <li key={bullet.id} className="group flex items-start gap-2 text-sm">
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400" />
             <div className="flex-1">
@@ -86,13 +153,22 @@ export default function BulletList({
             </div>
             <button
               type="button"
+              onClick={() => startEdit(bullet)}
+              className="shrink-0 text-xs text-slate-400 hover:text-brand-600"
+              aria-label="Edit bullet"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
               onClick={() => void removeBullet(bullet.id)}
-              className="shrink-0 text-xs text-slate-400 opacity-0 transition group-hover:opacity-100 hover:text-red-600"
+              className="shrink-0 text-xs text-slate-400 hover:text-red-600"
               aria-label="Delete bullet"
             >
               Delete
             </button>
           </li>
+          )
         ))}
 
         {bullets.length === 0 && (

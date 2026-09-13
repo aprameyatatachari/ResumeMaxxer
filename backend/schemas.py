@@ -220,11 +220,14 @@ class EducationCreate(EducationBase):
 class EducationUpdate(BaseModel):
     """All fields optional - this backs a PATCH, not a PUT.
 
-    Cross-field rules are not re-checked here: a PATCH sees only the changed
-    fields, so it cannot know the resulting row. The frontend edits through a
-    level-aware form, and a bad combination is cosmetic rather than unsafe.
+    Cross-field rules cannot be checked on a partial body, so the router merges
+    the patch into the stored row and validates the RESULT against
+    `EducationCreate` (see `routers.vault._merge_validated`). `level` is
+    editable: changing Class X into a School entry is a legitimate edit, and
+    the merged validation stops it leaving fields from the old level behind.
     """
 
+    level: Optional[EducationLevel] = None
     institution: Optional[str] = Field(default=None, min_length=1, max_length=255)
     location: Optional[str] = Field(default=None, max_length=255)
     board: Optional[Board] = None
@@ -261,6 +264,12 @@ class ExperienceCreate(BaseModel):
     start_date: date
     end_date: Optional[date] = None  # None means "Present"
     type: ExperienceType = ExperienceType.WORK
+
+    @model_validator(mode="after")
+    def check_dates(self) -> "ExperienceCreate":
+        if self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("end date cannot be before start date")
+        return self
 
 
 class ExperienceUpdate(BaseModel):

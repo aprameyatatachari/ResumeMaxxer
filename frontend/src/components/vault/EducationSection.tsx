@@ -393,16 +393,59 @@ function toPayload(form: FormState): EducationInput {
   }
 }
 
-export default function EducationSection({
-  educations,
-  onChange,
+/** A stored entry as form state, so the edit form opens pre-filled. */
+function fromEducation(education: Education): FormState {
+  const text = (value: number | string | null) => (value == null ? '' : String(value))
+  const isSchool = education.level === 'SCHOOL'
+  return {
+    ...EMPTY,
+    level: education.level,
+    institution: education.institution,
+    location: education.location,
+    board: education.board ?? '',
+    stream: education.stream ?? '',
+    degree: education.degree ?? '',
+    start_year: text(education.start_year),
+    end_year: text(education.end_year),
+    start_month: text(education.start_month),
+    end_month: text(education.end_month),
+    score: education.score ?? '',
+    score_type: education.score_type ?? (education.level === 'HIGHER_ED' ? 'CGPA' : 'PERCENTAGE'),
+    coursework: education.coursework ?? '',
+    has_class10: isSchool ? Boolean(education.class10_board) : true,
+    class10_board: education.class10_board ?? '',
+    class10_score: education.class10_score ?? '',
+    class10_score_type: education.class10_score_type ?? 'PERCENTAGE',
+    has_class12: isSchool ? Boolean(education.class12_board) : true,
+    class12_board: education.class12_board ?? '',
+    class12_stream: education.class12_stream ?? '',
+    class12_score: education.class12_score ?? '',
+    class12_score_type: education.class12_score_type ?? 'PERCENTAGE',
+    start_grade: education.start_grade ?? '',
+    end_grade: education.end_grade ?? '',
+  }
+}
+
+/**
+ * The qualification form, shared by "add" and "edit".
+ *
+ * One form for both means an edit can never offer fewer fields than creating
+ * did - including changing the entry type, say Class X into a School entry.
+ * The backend validates the whole merged row, so an edit is held to the same
+ * rules as a new entry.
+ */
+function EducationForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
 }: {
-  educations: Education[]
-  onChange: () => void
+  initial: FormState
+  submitLabel: string
+  onSubmit: (payload: EducationInput) => Promise<void>
+  onCancel: () => void
 }) {
-  const api = useApi()
-  const [form, setForm] = useState<FormState>(EMPTY)
-  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState<FormState>(initial)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -436,16 +479,334 @@ export default function EducationSection({
     setBusy(true)
     setError(null)
     try {
-      await api.createEducation(toPayload(form))
-      setForm(EMPTY)
-      setOpen(false)
-      onChange()
+      await onSubmit(toPayload(form))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save that.')
-    } finally {
       setBusy(false)
     }
   }
+
+  return (
+    <div className="mb-3">
+      {error && (
+        <div className="mb-3">
+          <Alert variant="error" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
+      )}
+      <form onSubmit={submit} className="card mb-3 space-y-4">
+        {/* --- Level picker: drives everything below ------------------ */}
+        <fieldset>
+          <legend className="label">Entry type</legend>
+          <div className="flex flex-wrap gap-2">
+            {LEVEL_ORDER.map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => changeLevel(level)}
+                aria-pressed={form.level === level}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  form.level === level
+                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
+                    : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {LEVEL_LABELS[level]}
+              </button>
+            ))}
+          </div>
+          {(isClassLevel || isSchool) && (
+            <p className="mt-2 text-xs text-slate-500">
+              {isSchool
+                ? 'One heading for your time at this school, with your Class X / XII results as bullets underneath. Changed schools? Add one School entry for each.'
+                : 'Prefer one heading per school with your results as bullets? Use "School (X & XII together)" instead.'}
+            </p>
+          )}
+        </fieldset>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="institution">
+              {isDegree ? 'College / University' : 'School name'}
+            </label>
+            <input
+              id="institution"
+              className="input"
+              required
+              value={form.institution}
+              onChange={(event) => update('institution', event.target.value)}
+              placeholder={isDegree ? 'VIT Vellore' : 'Delhi Public School'}
+            />
+          </div>
+
+          <div>
+            <label className="label" htmlFor="edu-location">
+              Location
+            </label>
+            <input
+              id="edu-location"
+              className="input"
+              value={form.location}
+              onChange={(event) => update('location', event.target.value)}
+              placeholder="Bengaluru, Karnataka"
+            />
+          </div>
+
+          {/* --- Class X / XII: board and stream -------------------- */}
+          {isClassLevel && (
+            <BoardSelect
+              id="board"
+              label="Board"
+              value={form.board}
+              onChange={(value) => update('board', value)}
+            />
+          )}
+          {form.level === 'CLASS_12' && (
+            <StreamSelect
+              id="stream"
+              label="Stream / specialisation"
+              value={form.stream}
+              onChange={(value) => update('stream', value)}
+            />
+          )}
+
+          {/* --- Higher education only: degree --------------------- */}
+          {isDegree && (
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="degree">
+                Degree
+              </label>
+              <input
+                id="degree"
+                className="input"
+                required
+                value={form.degree}
+                onChange={(event) => update('degree', event.target.value)}
+                placeholder="B.E. Computer Science"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* --- Dates ------------------------------------------------- */}
+        {isClassLevel ? (
+          // A board result is one moment: only the year of passing, which is
+          // all the resume shows.
+          <div className="sm:w-1/2">
+            <span className="label">
+              Year of passing{' '}
+              <span className="text-slate-400">(or expected)</span>
+            </span>
+            <YearSelect
+              label="Year of passing"
+              required
+              value={form.end_year}
+              onChange={(value) => update('end_year', value)}
+            />
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <span className="label">{isSchool ? 'Joined this school' : 'Started'}</span>
+              <div className="flex gap-2">
+                {isDegree && (
+                  <MonthSelect
+                    label="Start month"
+                    value={form.start_month}
+                    onChange={(value) => update('start_month', value)}
+                  />
+                )}
+                <YearSelect
+                  label="Start year"
+                  required
+                  value={form.start_year}
+                  onChange={(value) => update('start_year', value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className="label">
+                {isSchool ? 'Left this school' : 'Graduating'}{' '}
+                <span className="text-slate-400">(blank if ongoing)</span>
+              </span>
+              <div className="flex gap-2">
+                {isDegree && (
+                  <MonthSelect
+                    label="End month"
+                    value={form.end_month}
+                    onChange={(value) => update('end_month', value)}
+                  />
+                )}
+                <YearSelect
+                  label="End year"
+                  value={form.end_year}
+                  onChange={(value) => update('end_year', value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- Score: degree and Class X / XII ----------------------- */}
+        {!isSchool && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ScoreInput
+              id="score"
+              label={form.score_type === 'CGPA' ? 'CGPA' : 'Percentage'}
+              typeLabel="Score type"
+              score={form.score}
+              scoreType={form.score_type}
+              onScore={(value) => update('score', value)}
+              onType={(value) => update('score_type', value)}
+            />
+
+            {isDegree && (
+              <div>
+                <label className="label" htmlFor="coursework">
+                  Relevant coursework
+                </label>
+                <input
+                  id="coursework"
+                  className="input"
+                  value={form.coursework}
+                  onChange={(event) => update('coursework', event.target.value)}
+                  placeholder="Data Structures, DBMS, Operating Systems"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- School: grade span, free text for any system -------- */}
+        {isSchool && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="start-grade">
+                From grade <span className="text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="start-grade"
+                className="input"
+                maxLength={30}
+                value={form.start_grade}
+                onChange={(event) => update('start_grade', event.target.value)}
+                placeholder="LKG"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="end-grade">
+                To grade <span className="text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="end-grade"
+                className="input"
+                maxLength={30}
+                value={form.end_grade}
+                onChange={(event) => update('end_grade', event.target.value)}
+                placeholder="Class XII"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* --- School: the results taken here ----------------------- */}
+        {isSchool && (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-slate-200 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={form.has_class12}
+                  onChange={(event) => update('has_class12', event.target.checked)}
+                />
+                I took Class XII at this school
+              </label>
+              {form.has_class12 && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <BoardSelect
+                    id="class12-board"
+                    label="Class XII board"
+                    value={form.class12_board}
+                    onChange={(value) => update('class12_board', value)}
+                  />
+                  <StreamSelect
+                    id="class12-stream"
+                    label="Class XII stream"
+                    value={form.class12_stream}
+                    onChange={(value) => update('class12_stream', value)}
+                  />
+                  <ScoreInput
+                    id="class12-score"
+                    label="Class XII score"
+                    typeLabel="Class XII scale"
+                    score={form.class12_score}
+                    scoreType={form.class12_score_type}
+                    onScore={(value) => update('class12_score', value)}
+                    onType={(value) => update('class12_score_type', value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={form.has_class10}
+                  onChange={(event) => update('has_class10', event.target.checked)}
+                />
+                I took Class X at this school
+              </label>
+              {form.has_class10 && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <BoardSelect
+                    id="class10-board"
+                    label="Class X board"
+                    value={form.class10_board}
+                    onChange={(value) => update('class10_board', value)}
+                  />
+                  <ScoreInput
+                    id="class10-score"
+                    label="Class X score"
+                    typeLabel="Class X scale"
+                    score={form.class10_score}
+                    scoreType={form.class10_score_type}
+                    onScore={(value) => update('class10_score', value)}
+                    onType={(value) => update('class10_score_type', value)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button type="submit" className="btn-primary" disabled={busy}>
+            {busy ? 'Saving…' : submitLabel}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export default function EducationSection({
+  educations,
+  onChange,
+}: {
+  educations: Education[]
+  onChange: () => void
+}) {
+  const api = useApi()
+  // At most one form is open, so field ids never collide on the page.
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function remove(id: number) {
     try {
@@ -482,9 +843,12 @@ export default function EducationSection({
         <button
           type="button"
           className="btn-secondary shrink-0"
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => {
+            setEditingId(null)
+            setAdding((value) => !value)
+          }}
         >
-          {open ? 'Cancel' : 'Add qualification'}
+          {adding ? 'Cancel' : 'Add qualification'}
         </button>
       </div>
 
@@ -496,302 +860,36 @@ export default function EducationSection({
         </div>
       )}
 
-      {open && (
-        <form onSubmit={submit} className="card mb-3 space-y-4">
-          {/* --- Level picker: drives everything below ------------------ */}
-          <fieldset>
-            <legend className="label">What are you adding?</legend>
-            <div className="flex flex-wrap gap-2">
-              {LEVEL_ORDER.map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  onClick={() => changeLevel(level)}
-                  aria-pressed={form.level === level}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                    form.level === level
-                      ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
-                      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {LEVEL_LABELS[level]}
-                </button>
-              ))}
-            </div>
-            {(isClassLevel || isSchool) && (
-              <p className="mt-2 text-xs text-slate-500">
-                {isSchool
-                  ? 'One heading for your time at this school, with your Class X / XII results as bullets underneath. Changed schools? Add one School entry for each.'
-                  : 'Prefer one heading per school with your results as bullets? Use "School (X & XII together)" instead.'}
-              </p>
-            )}
-          </fieldset>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label" htmlFor="institution">
-                {isDegree ? 'College / University' : 'School name'}
-              </label>
-              <input
-                id="institution"
-                className="input"
-                required
-                value={form.institution}
-                onChange={(event) => update('institution', event.target.value)}
-                placeholder={isDegree ? 'VIT Vellore' : 'Delhi Public School'}
-              />
-            </div>
-
-            <div>
-              <label className="label" htmlFor="edu-location">
-                Location
-              </label>
-              <input
-                id="edu-location"
-                className="input"
-                value={form.location}
-                onChange={(event) => update('location', event.target.value)}
-                placeholder="Bengaluru, Karnataka"
-              />
-            </div>
-
-            {/* --- Class X / XII: board and stream -------------------- */}
-            {isClassLevel && (
-              <BoardSelect
-                id="board"
-                label="Board"
-                value={form.board}
-                onChange={(value) => update('board', value)}
-              />
-            )}
-            {form.level === 'CLASS_12' && (
-              <StreamSelect
-                id="stream"
-                label="Stream / specialisation"
-                value={form.stream}
-                onChange={(value) => update('stream', value)}
-              />
-            )}
-
-            {/* --- Higher education only: degree --------------------- */}
-            {isDegree && (
-              <div className="sm:col-span-2">
-                <label className="label" htmlFor="degree">
-                  Degree
-                </label>
-                <input
-                  id="degree"
-                  className="input"
-                  required
-                  value={form.degree}
-                  onChange={(event) => update('degree', event.target.value)}
-                  placeholder="B.E. Computer Science"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* --- Dates ------------------------------------------------- */}
-          {isClassLevel ? (
-            // A board result is one moment: only the year of passing, which is
-            // all the resume shows.
-            <div className="sm:w-1/2">
-              <span className="label">
-                Year of passing{' '}
-                <span className="text-slate-400">(or expected)</span>
-              </span>
-              <YearSelect
-                label="Year of passing"
-                required
-                value={form.end_year}
-                onChange={(value) => update('end_year', value)}
-              />
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <span className="label">{isSchool ? 'Joined this school' : 'Started'}</span>
-                <div className="flex gap-2">
-                  {isDegree && (
-                    <MonthSelect
-                      label="Start month"
-                      value={form.start_month}
-                      onChange={(value) => update('start_month', value)}
-                    />
-                  )}
-                  <YearSelect
-                    label="Start year"
-                    required
-                    value={form.start_year}
-                    onChange={(value) => update('start_year', value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <span className="label">
-                  {isSchool ? 'Left this school' : 'Graduating'}{' '}
-                  <span className="text-slate-400">(blank if ongoing)</span>
-                </span>
-                <div className="flex gap-2">
-                  {isDegree && (
-                    <MonthSelect
-                      label="End month"
-                      value={form.end_month}
-                      onChange={(value) => update('end_month', value)}
-                    />
-                  )}
-                  <YearSelect
-                    label="End year"
-                    value={form.end_year}
-                    onChange={(value) => update('end_year', value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- Score: degree and Class X / XII ----------------------- */}
-          {!isSchool && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ScoreInput
-                id="score"
-                label={form.score_type === 'CGPA' ? 'CGPA' : 'Percentage'}
-                typeLabel="Score type"
-                score={form.score}
-                scoreType={form.score_type}
-                onScore={(value) => update('score', value)}
-                onType={(value) => update('score_type', value)}
-              />
-
-              {isDegree && (
-                <div>
-                  <label className="label" htmlFor="coursework">
-                    Relevant coursework
-                  </label>
-                  <input
-                    id="coursework"
-                    className="input"
-                    value={form.coursework}
-                    onChange={(event) => update('coursework', event.target.value)}
-                    placeholder="Data Structures, DBMS, Operating Systems"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* --- School: grade span, free text for any system -------- */}
-          {isSchool && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label" htmlFor="start-grade">
-                  From grade <span className="text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="start-grade"
-                  className="input"
-                  maxLength={30}
-                  value={form.start_grade}
-                  onChange={(event) => update('start_grade', event.target.value)}
-                  placeholder="LKG"
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="end-grade">
-                  To grade <span className="text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="end-grade"
-                  className="input"
-                  maxLength={30}
-                  value={form.end_grade}
-                  onChange={(event) => update('end_grade', event.target.value)}
-                  placeholder="Class XII"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* --- School: the results taken here ----------------------- */}
-          {isSchool && (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-slate-200 p-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={form.has_class12}
-                    onChange={(event) => update('has_class12', event.target.checked)}
-                  />
-                  I took Class XII at this school
-                </label>
-                {form.has_class12 && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <BoardSelect
-                      id="class12-board"
-                      label="Class XII board"
-                      value={form.class12_board}
-                      onChange={(value) => update('class12_board', value)}
-                    />
-                    <StreamSelect
-                      id="class12-stream"
-                      label="Class XII stream"
-                      value={form.class12_stream}
-                      onChange={(value) => update('class12_stream', value)}
-                    />
-                    <ScoreInput
-                      id="class12-score"
-                      label="Class XII score"
-                      typeLabel="Class XII scale"
-                      score={form.class12_score}
-                      scoreType={form.class12_score_type}
-                      onScore={(value) => update('class12_score', value)}
-                      onType={(value) => update('class12_score_type', value)}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-slate-200 p-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={form.has_class10}
-                    onChange={(event) => update('has_class10', event.target.checked)}
-                  />
-                  I took Class X at this school
-                </label>
-                {form.has_class10 && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <BoardSelect
-                      id="class10-board"
-                      label="Class X board"
-                      value={form.class10_board}
-                      onChange={(value) => update('class10_board', value)}
-                    />
-                    <ScoreInput
-                      id="class10-score"
-                      label="Class X score"
-                      typeLabel="Class X scale"
-                      score={form.class10_score}
-                      scoreType={form.class10_score_type}
-                      onScore={(value) => update('class10_score', value)}
-                      onType={(value) => update('class10_score_type', value)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save'}
-          </button>
-        </form>
+      {adding && (
+        <EducationForm
+          initial={EMPTY}
+          submitLabel="Save"
+          onSubmit={async (payload) => {
+            await api.createEducation(payload)
+            setAdding(false)
+            onChange()
+          }}
+          onCancel={() => setAdding(false)}
+        />
       )}
 
       <div className="space-y-3">
         {sorted.map((education) => {
+          if (editingId === education.id) {
+            return (
+              <EducationForm
+                key={education.id}
+                initial={fromEducation(education)}
+                submitLabel="Save changes"
+                onSubmit={async (payload) => {
+                  await api.updateEducation(education.id, payload)
+                  setEditingId(null)
+                  onChange()
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            )
+          }
           const bullets = schoolBullets(education)
           const score = shortScore(education.score, education.score_type)
           return (
@@ -827,19 +925,32 @@ export default function EducationSection({
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="btn-danger text-xs"
-                  onClick={() => void remove(education.id)}
-                >
-                  Delete
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs"
+                    aria-label={`Edit ${education.institution}`}
+                    onClick={() => {
+                      setAdding(false)
+                      setEditingId(education.id)
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger text-xs"
+                    onClick={() => void remove(education.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           )
         })}
 
-        {educations.length === 0 && !open && (
+        {educations.length === 0 && !adding && (
           <p className="text-sm text-slate-500">Nothing added yet.</p>
         )}
       </div>

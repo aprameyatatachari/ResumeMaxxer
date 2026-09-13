@@ -155,6 +155,63 @@ test('a project can be added manually', async ({ page }) => {
   await expect(page.getByText('Python, FastAPI, PostgreSQL')).toBeVisible()
 })
 
+test('every vault entry can be edited in place, without deleting it', async ({ page }) => {
+  // --- Education: change a field, and it survives a reload ----------------
+  await addDegree(page)
+  await page.getByRole('button', { name: 'Edit VIT Vellore' }).click()
+  // The form opens pre-filled with what is stored.
+  await expect(page.getByLabel('Degree')).toHaveValue('B.Tech Computer Science')
+  await page.getByLabel('CGPA').fill('9.1')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('CGPA 9.1')).toBeVisible()
+
+  // An edit the backend rejects shows its reason and saves nothing.
+  await page.getByRole('button', { name: 'Edit VIT Vellore' }).click()
+  await page.getByLabel('Start year').selectOption('2026')
+  await page.getByLabel('End year').selectOption('2022')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('end year cannot be before start year')).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).first().click()
+
+  // --- Experience ---------------------------------------------------------
+  await page.getByRole('button', { name: 'Add role' }).click()
+  await page.getByLabel('Title').fill('Intern')
+  await page.getByLabel('Organization').fill('Razorpay')
+  await page.getByLabel('Started').fill('2025-05-01')
+  await page.getByRole('button', { name: 'Save role' }).click()
+
+  await page.getByRole('button', { name: 'Edit Intern at Razorpay' }).click()
+  await page.getByLabel('Title').fill('Backend Engineering Intern')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Backend Engineering Intern')).toBeVisible()
+
+  // --- Bullet -------------------------------------------------------------
+  await page.getByLabel('Bullet text').fill('Built a service')
+  await page.getByRole('button', { name: 'Add bullet' }).click()
+  await page.getByRole('button', { name: 'Edit bullet' }).click()
+  await page.getByLabel('Edit bullet text').fill('Built a reconciliation service in FastAPI')
+  await page.getByLabel('Edit tags').fill('python, fastapi')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Built a reconciliation service in FastAPI')).toBeVisible()
+  await expect(page.getByText('Built a service', { exact: true })).toBeHidden()
+
+  // --- Project ------------------------------------------------------------
+  await page.getByRole('button', { name: 'Add manually' }).click()
+  await page.getByLabel('Title').fill('Scheduler')
+  await page.getByRole('button', { name: 'Save project' }).click()
+  await page.getByRole('button', { name: 'Edit Scheduler' }).click()
+  await page.getByLabel('Tech stack').fill('Python, OR-Tools')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Python, OR-Tools')).toBeVisible()
+
+  // Everything is really stored, not just shown.
+  await page.reload()
+  await expect(page.getByText('CGPA 9.1')).toBeVisible()
+  await expect(page.getByText('Backend Engineering Intern')).toBeVisible()
+  await expect(page.getByText('Built a reconciliation service in FastAPI')).toBeVisible()
+  await expect(page.getByText('Python, OR-Tools')).toBeVisible()
+})
+
 test('tailoring refuses an empty vault instead of calling the AI', async ({ page }) => {
   await page.goto('/tailor')
 
