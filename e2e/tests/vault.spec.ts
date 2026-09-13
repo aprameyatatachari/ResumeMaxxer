@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('contact details persist across a reload', async ({ page }) => {
-  await page.getByLabel('Phone').fill('+91 98765 43210')
+  await page.getByLabel('Phone', { exact: true }).fill('+91 98765 43210')
   await page.getByLabel('GitHub username').fill('ananyak')
   await page.getByRole('button', { name: 'Save contact details' }).click()
 
@@ -210,6 +210,71 @@ test('every vault entry can be edited in place, without deleting it', async ({ p
   await expect(page.getByText('Backend Engineering Intern')).toBeVisible()
   await expect(page.getByText('Built a reconciliation service in FastAPI')).toBeVisible()
   await expect(page.getByText('Python, OR-Tools')).toBeVisible()
+})
+
+test('entries are shown in the order the student sets, and it persists', async ({ page }) => {
+  // Added degree first, then a Class XII entry - no automatic date sorting.
+  await addDegree(page)
+  await page.getByRole('button', { name: 'Add qualification' }).click()
+  await page.getByRole('button', { name: 'Class XII (Senior Secondary)' }).click()
+  await page.getByLabel('School name').fill('Delhi Public School')
+  await page.getByLabel('Board').selectOption('CBSE')
+  await page.getByLabel('Stream / specialisation').selectOption('PCM')
+  await page.getByLabel('Year of passing').selectOption('2022')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+  const headings = page.locator('section').filter({ hasText: 'Education' }).locator('h3')
+  await expect(headings).toHaveText([/VIT Vellore/, /Delhi Public School/])
+
+  // The first entry cannot move up; the last cannot move down.
+  await expect(page.getByRole('button', { name: 'Move VIT Vellore up' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Move Delhi Public School up' }).click()
+  await expect(headings).toHaveText([/Delhi Public School/, /VIT Vellore/])
+
+  await page.reload()
+  await expect(headings).toHaveText([/Delhi Public School/, /VIT Vellore/])
+
+  // Drag-and-drop does the same thing: drag the degree's grip onto the
+  // school's card and the degree takes its place.
+  const cards = page.locator('[data-sortable="education"]')
+  await page.getByLabel('Drag VIT Vellore to reorder').dragTo(cards.first())
+  await expect(headings).toHaveText([/VIT Vellore/, /Delhi Public School/])
+
+  await page.reload()
+  await expect(headings).toHaveText([/VIT Vellore/, /Delhi Public School/])
+})
+
+test('extra links can be added, hidden from the resume and rearranged', async ({ page }) => {
+  await page.getByLabel('New link display text').fill('LeetCode')
+  await page.getByLabel('New link URL').fill('leetcode.com/u/ananya')
+  await page.getByRole('button', { name: 'Add link' }).click()
+  // Typing the next link straight away must not be wiped by the first save.
+  await page.getByLabel('New link URL').fill('kaggle.com/ananya')
+  await page.getByRole('button', { name: 'Add link' }).click()
+
+  // A bare domain is stored as a full link; blank display text shows the URL.
+  await expect(page.getByText('https://leetcode.com/u/ananya')).toBeVisible()
+  await expect(page.getByText('kaggle.com/ananya', { exact: true })).toBeVisible()
+
+  // An unsafe link is refused with a reason.
+  await page.getByLabel('New link URL').fill('javascript:alert(1)')
+  await page.getByRole('button', { name: 'Add link' }).click()
+  await expect(page.getByText('only http and https links are allowed')).toBeVisible()
+  await page.getByLabel('New link URL').fill('')
+
+  await page.getByLabel('Show LeetCode on resume').uncheck()
+  await page.getByRole('button', { name: 'Move https://kaggle.com/ananya up' }).click()
+
+  // Contact-field switches save with the contact form.
+  await page.getByLabel('Show phone on resume').uncheck()
+  await page.getByRole('button', { name: 'Save contact details' }).click()
+  await expect(page.getByText('Saved.')).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByLabel('Show LeetCode on resume')).not.toBeChecked()
+  await expect(page.getByLabel('Show phone on resume')).not.toBeChecked()
+  const linkNames = page.locator('li').filter({ has: page.getByLabel(/^Show .* on resume$/) }).locator('p.font-medium')
+  await expect(linkNames).toHaveText(['kaggle.com/ananya', 'LeetCode'])
 })
 
 test('tailoring refuses an empty vault instead of calling the AI', async ({ page }) => {

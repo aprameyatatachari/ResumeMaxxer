@@ -56,6 +56,7 @@ from models import (
     EntityType,
     Experience,
     GeneratedResume,
+    ProfileLink,
     Project,
     ScoreType,
     User,
@@ -66,6 +67,8 @@ from schemas import (
     JobDescriptionSource,
     QuotaStatus,
     ResumeEducation,
+    ResumeHeader,
+    ResumeLink,
     ResumePayload,
     TailorResponse,
 )
@@ -288,27 +291,19 @@ def _school_highlights(education: Education) -> list[str]:
     return lines
 
 
-# Most recent first: degree, then school-level rows by year, then Class X.
-_EDUCATION_ORDER = {
-    EducationLevel.HIGHER_ED: 0,
-    EducationLevel.SCHOOL: 1,
-    EducationLevel.CLASS_12: 1,
-    EducationLevel.CLASS_10: 2,
-}
-
-
 def education_entries(educations: Sequence[Education]) -> list[ResumeEducation]:
-    """Every education row as it will read on the resume, in resume order.
+    """Every education row as it will read on the resume, in the student's order.
+
+    The order is the one the student set in the vault (`position`), not a
+    chronological guess - some students lead with a school result that a role
+    screens on, others with the degree.
 
     The single source of truth for education text. It feeds the prompt, and
     it also replaces whatever the AI returns for education (see
     `_rehydrate_education`), so a model that paraphrases a score or reorders a
     School entry's bullets cannot change what the student sees.
     """
-    ordered = sorted(
-        educations,
-        key=lambda e: (_EDUCATION_ORDER.get(e.level, 9), -(e.end_year or 9999)),
-    )
+    ordered = sorted(educations, key=lambda e: (e.position, e.id or 0))
     return [
         ResumeEducation(
             institution=e.institution,
@@ -320,6 +315,68 @@ def education_entries(educations: Sequence[Education]) -> list[ResumeEducation]:
         )
         for e in ordered
     ]
+
+
+def build_header(user: User, links: Sequence[ProfileLink]) -> ResumeHeader:
+    """The resume header, from the vault and the student's "show on resume"
+    switches. Deterministic: the model is never asked to fill contact details,
+    so it can neither invent one nor restore one the student hid."""
+    full_name = f"{user.first_name} {user.last_name}".strip() or "Your Name"
+    return ResumeHeader(
+        full_name=full_name,
+        phone=user.phone if user.include_phone else "",
+        email=user.email if user.include_email else "",
+        linkedin=user.linkedin_url if user.include_linkedin else "",
+        github=user.github_url if user.include_github else "",
+        portfolio=user.portfolio_url if user.include_portfolio else "",
+        links=[
+            ResumeLink(label=link.label, url=link.url)
+            for link in links
+            if link.include_on_resume
+        ],
+    )
+
+
+def _apply_vault_order(
+    resume: ResumePayload,
+    experiences: Sequence[Experience],
+    projects: Sequence[Project],
+) -> ResumePayload:
+    """Put the kept roles and projects back in the order the student set.
+
+    Roles are matched on organisation and date range, which the prompt tells
+    the model to copy verbatim; projects on their name. Anything that does not
+    match stays, after the matched ones, in the model's order - reordering is
+    never a reason to drop content.
+    """
+    def rank(keys: dict[str, int], key: str, fallback: int) -> int:
+        return keys.get(key, fallback)
+
+    role_rank: dict[str, int] = {}
+    org_rank: dict[str, int] = {}
+    for index, row in enumerate(experiences):
+        dates = _format_date_range(row.start_date, row.end_date)
+        role_rank.setdefault(f"{_normalise(row.organization)}|{_normalise(dates)}", index)
+        org_rank.setdefault(_normalise(row.organization), index)
+
+    last = len(experiences)
+    resume.experience = sorted(
+        resume.experience,
+        key=lambda e: rank(
+            role_rank,
+            f"{_normalise(e.organization)}|{_normalise(e.date_range)}",
+            rank(org_rank, _normalise(e.organization), last),
+        ),
+    )
+
+    project_rank: dict[str, int] = {}
+    for index, row in enumerate(projects):
+        project_rank.setdefault(_normalise(row.title), index)
+    resume.projects = sorted(
+        resume.projects,
+        key=lambda p: rank(project_rank, _normalise(p.name), len(projects)),
+    )
+    return resume
 
 
 def _normalise(text: str) -> str:
@@ -568,13 +625,19 @@ async def tailor_resume(
 
     # --- Load the vault ---------------------------------------------------
     educations = session.exec(
-        select(Education).where(Education.user_id == current_user.id)
+        select(Education)
+        .where(Education.user_id == current_user.id)
+        .order_by(Education.position, Education.id)
     ).all()
     experiences = session.exec(
-        select(Experience).where(Experience.user_id == current_user.id)
+        select(Experience)
+        .where(Experience.user_id == current_user.id)
+        .order_by(Experience.position, Experience.id)
     ).all()
     projects = session.exec(
-        select(Project).where(Project.user_id == current_user.id)
+        select(Project)
+        .where(Project.user_id == current_user.id)
+        .order_by(Project.position, Project.id)
     ).all()
     all_bullets = session.exec(
         select(Bullet).where(Bullet.user_id == current_user.id)
@@ -673,6 +736,18 @@ async def tailor_resume(
 
     # Education text comes from the vault, never from the model's paraphrase.
     resume = _rehydrate_education(resume, education_entries(educations))
+    # The model picks which roles and projects fit; the student decides their
+    # order. And the header is built from the student's own choices of what to
+    # show, so a hidden phone number cannot reappear.
+    resume = _apply_vault_order(resume, experiences, projects)
+    resume.header = build_header(
+        current_user,
+        session.exec(
+            select(ProfileLink)
+            .where(ProfileLink.user_id == current_user.id)
+            .order_by(ProfileLink.position, ProfileLink.id)
+        ).all(),
+    )
 
     # --- Step 4: store the snapshot --------------------------------------
     title = job_title or analysis.job_title or "Untitled Role"

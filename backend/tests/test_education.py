@@ -297,17 +297,18 @@ def test_non_school_rows_have_no_bullets():
     assert _school_highlights(row) == []
 
 
-def test_two_schools_are_both_listed_most_recent_first():
-    """Different schools across a student's life - one School entry each."""
+def test_entries_follow_the_students_order_not_chronology():
+    """Two schools and a degree, arranged by the student with a school first.
+    Nothing re-sorts them by level or year."""
     early = _school(institution="Kendriya Vidyalaya", start_year=2008, end_year=2018,
-                    class10_board=Board.CBSE)
-    late = _school(institution="Narayana Junior College", start_year=2018, end_year=2020,
-                   class12_board=Board.STATE, class12_stream=Stream.PCM)
+                    class10_board=Board.CBSE, position=0)
     degree = Education(user_id="u", level=EducationLevel.HIGHER_ED, institution="VIT",
-                       degree="B.Tech", start_year=2020)
+                       degree="B.Tech", start_year=2020, position=1)
+    late = _school(institution="Narayana Junior College", start_year=2018, end_year=2020,
+                   class12_board=Board.STATE, class12_stream=Stream.PCM, position=2)
 
-    names = [e.institution for e in education_entries([early, degree, late])]
-    assert names == ["VIT", "Narayana Junior College", "Kendriya Vidyalaya"]
+    names = [e.institution for e in education_entries([late, degree, early])]
+    assert names == ["Kendriya Vidyalaya", "VIT", "Narayana Junior College"]
 
 
 # ---------------------------------------------------------------------------

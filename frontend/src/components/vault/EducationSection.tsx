@@ -14,6 +14,9 @@ import {
   type Stream,
 } from '../../lib/types'
 import Alert from '../Alert'
+import { movedIds } from '../../lib/reorder'
+import MoveButtons from './MoveButtons'
+import SortableCard from './SortableCard'
 
 /**
  * Education, shaped around the Indian system.
@@ -817,18 +820,19 @@ export default function EducationSection({
     }
   }
 
-  // Most recent first: degree, then school-level rows by year, then Class X.
-  const levelOrder: Record<EducationLevel, number> = {
-    HIGHER_ED: 0,
-    SCHOOL: 1,
-    CLASS_12: 1,
-    CLASS_10: 2,
+  // No sorting here: the API returns entries in the order the student set,
+  // and that is the order they appear on the resume.
+
+  /** Save a new order. The list re-renders from the server response, so a
+   *  failed save simply leaves the old order on screen. */
+  async function move(ids: number[]) {
+    try {
+      await api.reorderEducation(ids)
+      onChange()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reorder.')
+    }
   }
-  const sorted = [...educations].sort(
-    (a, b) =>
-      levelOrder[a.level] - levelOrder[b.level] ||
-      (b.end_year ?? 9999) - (a.end_year ?? 9999),
-  )
 
   return (
     <section>
@@ -837,7 +841,8 @@ export default function EducationSection({
           <h2 className="text-lg font-semibold text-slate-900">Education</h2>
           <p className="text-xs text-slate-500">
             Add your degree plus Class XII and Class X - Indian recruiters screen
-            on board marks.
+            on board marks. Drag the ⠿ grip or use the arrows to set the order they appear on your
+            resume.
           </p>
         </div>
         <button
@@ -874,7 +879,7 @@ export default function EducationSection({
       )}
 
       <div className="space-y-3">
-        {sorted.map((education) => {
+        {educations.map((education, index) => {
           if (editingId === education.id) {
             return (
               <EducationForm
@@ -893,37 +898,51 @@ export default function EducationSection({
           const bullets = schoolBullets(education)
           const score = shortScore(education.score, education.score_type)
           return (
-            <div key={education.id} className="card">
+            <SortableCard
+              key={education.id}
+              type="education"
+              index={index}
+              onDrop={(from, to) => void move(movedIds(educations, from, to))}
+              className="card"
+            >
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-slate-900">
-                    {education.institution}
-                    {education.location && (
-                      <span className="font-normal text-slate-500">
-                        {' '}
-                        · {education.location}
-                      </span>
-                    )}
-                  </h3>
-                  <p className="text-sm text-slate-600">
-                    {describe(education)}
-                    {score && ` · ${score}`}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {formatPeriod(education)}
-                  </p>
-                  {bullets.length > 0 && (
-                    <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
-                      {bullets.map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {education.coursework && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      Coursework: {education.coursework}
+                <div className="flex items-start gap-2">
+                  <MoveButtons
+                    name={education.institution}
+                    index={index}
+                    count={educations.length}
+                    onMove={(from, to) => void move(movedIds(educations, from, to))}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      {education.institution}
+                      {education.location && (
+                        <span className="font-normal text-slate-500">
+                          {' '}
+                          · {education.location}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {describe(education)}
+                      {score && ` · ${score}`}
                     </p>
-                  )}
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {formatPeriod(education)}
+                    </p>
+                    {bullets.length > 0 && (
+                      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
+                        {bullets.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {education.coursework && (
+                      <p className="mt-2 text-sm text-slate-600">
+                        Coursework: {education.coursework}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
@@ -946,7 +965,7 @@ export default function EducationSection({
                   </button>
                 </div>
               </div>
-            </div>
+            </SortableCard>
           )
         })}
 

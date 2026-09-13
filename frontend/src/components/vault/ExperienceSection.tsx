@@ -6,6 +6,9 @@ import { bulletsFor } from '../../hooks/useVault'
 import type { Bullet, Experience, ExperienceInput, ExperienceType } from '../../lib/types'
 import Alert from '../Alert'
 import BulletList from './BulletList'
+import { movedIds } from '../../lib/reorder'
+import MoveButtons from './MoveButtons'
+import SortableCard from './SortableCard'
 
 const EMPTY = {
   title: '',
@@ -182,6 +185,17 @@ export default function ExperienceSection({
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  /** Save a new order. The list re-renders from the server response, so a
+   *  failed save simply leaves the old order on screen. */
+  async function move(ids: number[]) {
+    try {
+      await api.reorderExperience(ids)
+      onChange()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reorder.')
+    }
+  }
+
   async function remove(id: number) {
     try {
       // The backend deletes this role's bullets in the same transaction.
@@ -230,8 +244,14 @@ export default function ExperienceSection({
       )}
 
       <div className="space-y-3">
-        {experiences.map((experience) => (
-          <div key={experience.id} className="card">
+        {experiences.map((experience, index) => (
+          <SortableCard
+            key={experience.id}
+            type="experience"
+            index={index}
+            onDrop={(from, to) => void move(movedIds(experiences, from, to))}
+            className="card"
+          >
             {editingId === experience.id ? (
               // Editing swaps only the details; the bullets below stay
               // editable in their own right.
@@ -247,18 +267,26 @@ export default function ExperienceSection({
               />
             ) : (
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-slate-900">
-                    {experience.title}{' '}
-                    <span className="font-normal text-slate-500">
-                      at {experience.organization}
-                    </span>
-                  </h3>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {experience.start_date} → {experience.end_date ?? 'Present'}
-                    {experience.location && ` · ${experience.location}`} ·{' '}
-                    {experience.type === 'WORK' ? 'Work' : 'Extracurricular'}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <MoveButtons
+                    name={`${experience.title} at ${experience.organization}`}
+                    index={index}
+                    count={experiences.length}
+                    onMove={(from, to) => void move(movedIds(experiences, from, to))}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      {experience.title}{' '}
+                      <span className="font-normal text-slate-500">
+                        at {experience.organization}
+                      </span>
+                    </h3>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {experience.start_date} → {experience.end_date ?? 'Present'}
+                      {experience.location && ` · ${experience.location}`} ·{' '}
+                      {experience.type === 'WORK' ? 'Work' : 'Extracurricular'}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
@@ -289,7 +317,7 @@ export default function ExperienceSection({
               bullets={bulletsFor(groupedBullets, 'EXPERIENCE', experience.id)}
               onChange={onChange}
             />
-          </div>
+          </SortableCard>
         ))}
 
         {experiences.length === 0 && !adding && (

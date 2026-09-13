@@ -47,7 +47,7 @@ test('signing back in returns to the vault with the data still there', async ({ 
   const password = 'correct-horse-battery'
 
   await signUp(page, { name: 'Priya Nair', email, password })
-  await page.getByLabel('Phone').fill('+91 98765 43210')
+  await page.getByLabel('Phone', { exact: true }).fill('+91 98765 43210')
   await page.getByRole('button', { name: 'Save contact details' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()
 
@@ -60,7 +60,7 @@ test('signing back in returns to the vault with the data still there', async ({ 
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   await expect(page).toHaveURL(/\/vault$/)
-  await expect(page.getByLabel('Phone')).toHaveValue('+91 98765 43210')
+  await expect(page.getByLabel('Phone', { exact: true })).toHaveValue('+91 98765 43210')
 })
 
 test('a wrong password is refused without revealing whether the account exists', async ({

@@ -58,6 +58,11 @@ class UserRead(BaseModel):
     linkedin_url: str
     github_url: str
     portfolio_url: str
+    include_phone: bool
+    include_email: bool
+    include_linkedin: bool
+    include_github: bool
+    include_portfolio: bool
     created_at: datetime
 
 
@@ -77,6 +82,96 @@ class UserUpdate(BaseModel):
     linkedin_url: Optional[str] = Field(default=None, max_length=512)
     github_url: Optional[str] = Field(default=None, max_length=512)
     portfolio_url: Optional[str] = Field(default=None, max_length=512)
+    include_phone: Optional[bool] = None
+    include_email: Optional[bool] = None
+    include_linkedin: Optional[bool] = None
+    include_github: Optional[bool] = None
+    include_portfolio: Optional[bool] = None
+
+
+# --- Extra profile links ---------------------------------------------------
+# Characters that must never reach the URL argument of LaTeX's \href. Braces
+# and backslashes would end the argument early and let the rest of the value
+# run as LaTeX; the others are not valid unescaped in a URL anyway.
+_URL_FORBIDDEN = re.compile(r'[\s\\{}<>"^`|]')
+_URL_SCHEME = re.compile(r"^([a-z][a-z0-9+.-]*):", re.IGNORECASE)
+
+
+def normalise_link_url(value: str) -> str:
+    """Validate a user-supplied profile link and give it a scheme.
+
+    Students paste "leetcode.com/u/ananya" as often as the full URL, so a bare
+    domain is accepted and becomes https://. Anything with a scheme other than
+    http(s) - javascript:, file:, data: - is rejected outright: the value ends
+    up as a clickable link in a PDF sent to recruiters.
+    """
+    url = (value or "").strip()
+    if not url:
+        raise ValueError("link URL cannot be empty")
+    if _URL_FORBIDDEN.search(url):
+        raise ValueError("link URL contains spaces or characters a URL cannot have")
+    scheme = _URL_SCHEME.match(url)
+    if scheme and scheme.group(1).lower() not in ("http", "https"):
+        # "localhost:3000" also matches the pattern; treat a number after the
+        # colon as a port, not a scheme.
+        if not re.match(r"^[^:/]+:\d", url):
+            raise ValueError("only http and https links are allowed")
+    if not re.match(r"^https?://", url, re.IGNORECASE):
+        url = f"https://{url}"
+    if "." not in url.split("://", 1)[1].split("/", 1)[0]:
+        raise ValueError("that does not look like a web address")
+    return url
+
+
+class ProfileLinkCreate(BaseModel):
+    label: str = Field(default="", max_length=60)
+    url: str = Field(max_length=512)
+    include_on_resume: bool = True
+
+    @field_validator("url")
+    @classmethod
+    def check_url(cls, value: str) -> str:
+        return normalise_link_url(value)
+
+    @field_validator("label")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        return (value or "").strip()
+
+
+class ProfileLinkUpdate(BaseModel):
+    label: Optional[str] = Field(default=None, max_length=60)
+    url: Optional[str] = Field(default=None, max_length=512)
+    include_on_resume: Optional[bool] = None
+
+    @field_validator("url")
+    @classmethod
+    def check_url(cls, value: Optional[str]) -> Optional[str]:
+        return None if value is None else normalise_link_url(value)
+
+    @field_validator("label")
+    @classmethod
+    def strip_label(cls, value: Optional[str]) -> Optional[str]:
+        return None if value is None else value.strip()
+
+
+class ProfileLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    label: str
+    url: str
+    include_on_resume: bool
+
+
+class OrderUpdate(BaseModel):
+    """The complete new order of one section, first to last.
+
+    Must list every entry the student has in that section, exactly once. A
+    partial list is rejected rather than guessed at, since "where do the
+    missing ones go?" has no right answer.
+    """
+
+    ids: list[int]
 
 
 # --- Education -------------------------------------------------------------
@@ -340,6 +435,7 @@ class VaultRead(BaseModel):
     """
 
     user: UserRead
+    links: list[ProfileLinkRead] = []
     educations: list[EducationRead]
     experiences: list[ExperienceRead]
     projects: list[ProjectRead]
@@ -570,6 +666,18 @@ class ResumeHeader(BaseModel):
     linkedin: str = Field(description="Bare URL like 'linkedin.com/in/name', or ''.")
     github: str = Field(description="Bare URL like 'github.com/name', or ''.")
     portfolio: str = Field(description="Personal site URL, or ''.")
+    links: list["ResumeLink"] = Field(
+        default_factory=list,
+        description="Extra profile links. Filled from the vault automatically; "
+        "return an empty list.",
+    )
+
+
+class ResumeLink(BaseModel):
+    """One extra link in the header line."""
+
+    label: str = Field(description="Text shown. Empty means show the URL.")
+    url: str
 
 
 class ResumeEducation(BaseModel):

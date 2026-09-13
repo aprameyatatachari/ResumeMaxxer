@@ -26,6 +26,7 @@ import github_service
 from auth import get_current_user
 from database import get_session
 from gemini_key import get_student_api_key
+from routers.vault import next_position
 from models import Bullet, EntityType, Project, User
 from schemas import (
     BulletRead,
@@ -98,6 +99,8 @@ def _import_one(
         repo_url=repo.html_url,
         tech_stack=",".join(analysis.tech_stack or repo.languages),
         is_github_imported=True,
+        # Lands after the student's existing projects, like a manual add.
+        position=next_position(session, Project, current_user.id),
     )
     session.add(project)
     # Flush (not commit) to get the generated project.id while staying inside
