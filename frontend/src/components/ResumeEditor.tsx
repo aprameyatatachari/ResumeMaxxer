@@ -28,14 +28,14 @@ export default function ResumeEditor({
 
   return (
     <div className="card space-y-5">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-ink-faint">
         Editing the text below rebuilds the PDF. Nothing is saved until you
         press <strong>Save changes</strong>.
       </p>
 
       {/* --- Header ------------------------------------------------------ */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold text-slate-900">Header</legend>
+        <legend className="text-sm font-semibold text-ink">Header</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           <input
             className="input"
@@ -57,9 +57,9 @@ export default function ResumeEditor({
       {/* --- Experience -------------------------------------------------- */}
       {resume.experience.length > 0 && (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-slate-900">Experience</legend>
+          <legend className="text-sm font-semibold text-ink">Experience</legend>
           {resume.experience.map((entry, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 p-3">
+            <div key={i} className="rounded-xl border border-line p-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   className="input"
@@ -96,9 +96,9 @@ export default function ResumeEditor({
       {/* --- Projects ---------------------------------------------------- */}
       {resume.projects.length > 0 && (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-slate-900">Projects</legend>
+          <legend className="text-sm font-semibold text-ink">Projects</legend>
           {resume.projects.map((entry, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 p-3">
+            <div key={i} className="rounded-xl border border-line p-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   className="input"
@@ -136,11 +136,11 @@ export default function ResumeEditor({
       {/* --- Extracurriculars ------------------------------------------- */}
       {(resume.extracurriculars ?? []).length > 0 && (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-slate-900">
+          <legend className="text-sm font-semibold text-ink">
             Extracurricular activities
           </legend>
           {(resume.extracurriculars ?? []).map((entry, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 p-3">
+            <div key={i} className="rounded-xl border border-line p-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   className="input"
@@ -179,7 +179,7 @@ export default function ResumeEditor({
       {/* --- Achievements ----------------------------------------------- */}
       {(resume.achievements ?? []).length > 0 && (
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold text-slate-900">Achievements</legend>
+          <legend className="text-sm font-semibold text-ink">Achievements</legend>
           {(resume.achievements ?? []).map((item, i) => (
             <div key={i} className="grid gap-2 sm:grid-cols-[2fr_3fr_1fr]">
               <input
@@ -212,7 +212,7 @@ export default function ResumeEditor({
       {/* --- Skills ------------------------------------------------------ */}
       {resume.skills.length > 0 && (
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold text-slate-900">
+          <legend className="text-sm font-semibold text-ink">
             Technical skills
           </legend>
           {resume.skills.map((group, i) => (

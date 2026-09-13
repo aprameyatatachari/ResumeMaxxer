@@ -35,7 +35,7 @@ function ShowToggle({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+    <label className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
       <input
         type="checkbox"
         checked={checked}
@@ -111,10 +111,10 @@ function LinksEditor({ links, onChange }: { links: ProfileLink[]; onChange: () =
   }
 
   return (
-    <div className="space-y-3 border-t border-slate-100 pt-3">
+    <div className="space-y-3 border-t border-line pt-3">
       <div>
-        <h3 className="text-sm font-semibold text-slate-800">More links</h3>
-        <p className="text-xs text-slate-500">
+        <h3 className="text-sm font-semibold text-ink">More links</h3>
+        <p className="text-xs text-ink-faint">
           Coding profiles, Kaggle, a blog - anything else for your header. The
           display text is optional; leave it blank to show the link itself.
         </p>
@@ -137,7 +137,7 @@ function LinksEditor({ links, onChange }: { links: ProfileLink[]; onChange: () =
               onDrop={(from, to) =>
                 void run(() => api.reorderLinks(movedIds(links, from, to)), 'Could not reorder.')
               }
-              className="flex items-center gap-2 rounded-lg border border-slate-200 p-2"
+              className="flex items-center gap-2 rounded-xl border border-line p-2"
             >
               <MoveButtons
                 name={link.label || link.url}
@@ -172,14 +172,14 @@ function LinksEditor({ links, onChange }: { links: ProfileLink[]; onChange: () =
               ) : (
                 <>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800">
+                    <p className="truncate text-sm font-medium text-ink">
                       {link.label || link.url.replace(/^https?:\/\//, '')}
                     </p>
                     {link.label && (
-                      <p className="truncate text-xs text-slate-500">{link.url}</p>
+                      <p className="truncate text-xs text-ink-faint">{link.url}</p>
                     )}
                   </div>
-                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-ink-faint">
                     <input
                       type="checkbox"
                       checked={shown[link.id] ?? link.include_on_resume}
@@ -292,11 +292,11 @@ export default function ProfileSection({
   return (
     <section>
       <div className="mb-3">
-        <h2 className="text-lg font-semibold text-slate-900">Contact details</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-lg font-semibold text-ink">Contact details</h2>
+        <p className="text-xs text-ink-faint">
           These become the header line of every resume you generate. Untick
           "Show on resume" to keep something on file without printing it. For
-          LinkedIn and GitHub, enter just your username — the rest of the link
+          LinkedIn and GitHub, enter just your username - the rest of the link
           is added for you.
         </p>
       </div>
@@ -383,7 +383,7 @@ export default function ProfileSection({
                 LinkedIn username
               </label>
               <div className="flex">
-                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-line-strong bg-surface-2 px-3 text-sm text-ink-faint">
                   linkedin.com/in/
                 </span>
                 <input
@@ -405,7 +405,7 @@ export default function ProfileSection({
                 GitHub username
               </label>
               <div className="flex">
-                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-line-strong bg-surface-2 px-3 text-sm text-ink-faint">
                   github.com/
                 </span>
                 <input
@@ -425,14 +425,14 @@ export default function ProfileSection({
 
             <div className="sm:col-span-2">
               <label className="label" htmlFor="portfolio">
-                Portfolio <span className="text-slate-400">(optional)</span>
+                Portfolio <span className="text-ink-faint">(optional)</span>
               </label>
               <input
                 id="portfolio"
                 className="input"
                 value={form.portfolio_url}
                 onChange={(event) => update('portfolio_url', event.target.value)}
-                placeholder="your-name.dev — full domain, no https://"
+                placeholder="your-name.dev - full domain, no https://"
               />
               <ShowToggle
                 field="portfolio"
@@ -443,7 +443,7 @@ export default function ProfileSection({
           </div>
 
           <div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-faint">
               Email on your resume is {user.email}, taken from your sign-in account.
             </p>
             <ShowToggle
@@ -457,7 +457,7 @@ export default function ProfileSection({
             <button type="submit" className="btn-primary" disabled={busy}>
               {busy ? 'Saving…' : 'Save contact details'}
             </button>
-            {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+            {saved && <span className="text-sm text-success">Saved.</span>}
           </div>
         </form>
 

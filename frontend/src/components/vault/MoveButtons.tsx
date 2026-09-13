@@ -1,4 +1,5 @@
 import { useDragHandle } from '../../lib/drag-handle'
+import { ChevronDown, ChevronUp, Grip } from '../icons'
 
 /**
  * Reordering controls for a vault entry: a drag grip between up and down
@@ -27,7 +28,7 @@ export default function MoveButtons({
   // absent from the accessibility tree, which is confusing to a screen reader
   // user and breaks anything that looks for it by role.
   const arrow =
-    'rounded px-1.5 leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-default disabled:opacity-25 disabled:hover:bg-transparent'
+    'grid h-6 w-6 place-items-center rounded-full text-ink-faint hover:bg-surface-2 hover:text-ink-muted disabled:cursor-default disabled:opacity-25 disabled:hover:bg-transparent'
 
   return (
     <div className="flex flex-col items-center">
@@ -38,17 +39,17 @@ export default function MoveButtons({
         disabled={index === 0}
         onClick={() => onMove(index, index - 1)}
       >
-        ▲
+        <ChevronUp size={14} />
       </button>
       {dragHandle && count > 1 && (
         <span
           ref={dragHandle}
-          className="cursor-grab select-none px-1 text-slate-400 hover:text-slate-700 active:cursor-grabbing"
+          className="grid h-6 w-6 cursor-grab select-none place-items-center text-ink-faint hover:text-ink-muted active:cursor-grabbing"
           title="Drag to reorder"
           aria-label={`Drag ${name} to reorder`}
           data-drag-handle
         >
-          ⠿
+          <Grip size={14} />
         </span>
       )}
       <button
@@ -58,7 +59,7 @@ export default function MoveButtons({
         disabled={index === count - 1}
         onClick={() => onMove(index, index + 1)}
       >
-        ▼
+        <ChevronDown size={14} />
       </button>
     </div>
   )

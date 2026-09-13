@@ -93,11 +93,11 @@ export default function BulletList({
   }
 
   return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
+    <div className="mt-3 border-t border-line pt-3">
       <ul className="space-y-1.5">
         {bullets.map((bullet) => (
           editingId === bullet.id ? (
-            <li key={bullet.id} className="space-y-2 rounded-lg bg-slate-50 p-2">
+            <li key={bullet.id} className="space-y-2 rounded-xl bg-surface-2 p-2">
               <textarea
                 className="input"
                 rows={2}
@@ -132,9 +132,9 @@ export default function BulletList({
             </li>
           ) : (
           <li key={bullet.id} className="group flex items-start gap-2 text-sm">
-            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400" />
+            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-faint" />
             <div className="flex-1">
-              <p className="text-slate-700">
+              <p className="text-ink-muted">
                 {bullet.ai_enhanced_text ?? bullet.original_text}
               </p>
               {bullet.tags && (
@@ -154,7 +154,7 @@ export default function BulletList({
             <button
               type="button"
               onClick={() => startEdit(bullet)}
-              className="shrink-0 text-xs text-slate-400 hover:text-brand-600"
+              className="shrink-0 text-xs text-ink-faint hover:text-iris-fg"
               aria-label="Edit bullet"
             >
               Edit
@@ -162,7 +162,7 @@ export default function BulletList({
             <button
               type="button"
               onClick={() => void removeBullet(bullet.id)}
-              className="shrink-0 text-xs text-slate-400 hover:text-red-600"
+              className="shrink-0 text-xs text-ink-faint hover:text-danger"
               aria-label="Delete bullet"
             >
               Delete
@@ -172,7 +172,7 @@ export default function BulletList({
         ))}
 
         {bullets.length === 0 && (
-          <li className="text-sm text-slate-400">
+          <li className="text-sm text-ink-faint">
             No bullets yet. The tailoring engine can only use what is here.
           </li>
         )}
@@ -198,11 +198,11 @@ export default function BulletList({
             {busy ? 'Adding…' : 'Add bullet'}
           </button>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-ink-faint">
           Tags are how this bullet gets matched to a job description. Keep them
           short and lowercase.
         </p>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
       </form>
     </div>
   )

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
+import TailorLoom from '../components/TailorLoom'
 import ApiKeyDialog from '../components/ApiKeyDialog'
 import ResumePreview from '../components/ResumePreview'
 import { useApi } from '../hooks/useApi'
@@ -77,14 +78,14 @@ function QuotaBanner({
 }) {
   if (quota.using_own_key) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm">
-        <span className="text-emerald-800">
-          Running on your own Gemini key — unlimited tailoring.
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-success/40 bg-success-wash px-4 py-2.5 text-sm">
+        <span className="text-success">
+          Running on your own Gemini key - unlimited tailoring.
         </span>
         <button
           type="button"
           onClick={onAddKey}
-          className="font-medium text-emerald-700 underline"
+          className="font-medium text-success underline"
         >
           Manage key
         </button>
@@ -95,13 +96,13 @@ function QuotaBanner({
   const out = quota.remaining <= 0
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5 text-sm ${
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5 text-sm ${
         out
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-slate-200 bg-white'
+          ? 'border-ember/40 bg-ember/10'
+          : 'border-line bg-surface'
       }`}
     >
-      <span className={out ? 'text-amber-900' : 'text-slate-600'}>
+      <span className={out ? 'text-ink' : 'text-ink-muted'}>
         {out ? (
           <>
             You have used all {quota.limit} free tailoring runs this week. They
@@ -109,7 +110,7 @@ function QuotaBanner({
           </>
         ) : (
           <>
-            <strong className="text-slate-900">
+            <strong className="text-ink">
               {quota.remaining} of {quota.limit}
             </strong>{' '}
             free tailoring runs left this week.
@@ -120,7 +121,7 @@ function QuotaBanner({
         type="button"
         onClick={onAddKey}
         className={`font-medium underline ${
-          out ? 'text-amber-900' : 'text-brand-600'
+          out ? 'text-ink' : 'text-iris-fg'
         }`}
       >
         {out ? 'Add your own key to carry on' : 'Use your own key instead'}
@@ -246,10 +247,10 @@ export default function Tailor() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">
           Tailor a resume
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-ink-muted">
           Upload the job description exactly as the company sent it - PDF or Word.
           The text is read out of the file automatically.
         </p>
@@ -289,8 +290,8 @@ export default function Tailor() {
             }}
             className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
               dragging
-                ? 'border-brand-500 bg-brand-50'
-                : 'border-slate-300 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/40'
+                ? 'border-iris bg-iris/10'
+                : 'border-line-strong bg-surface-2 hover:border-iris hover:bg-iris/10'
             }`}
           >
             <input
@@ -302,23 +303,23 @@ export default function Tailor() {
             />
             {file ? (
               <>
-                <span className="font-medium text-slate-900">{file.name}</span>
-                <span className="mt-1 text-xs text-slate-500">
+                <span className="font-medium text-ink">{file.name}</span>
+                <span className="mt-1 text-xs text-ink-faint">
                   {formatSize(file.size)} · click to choose a different file
                 </span>
               </>
             ) : (
               <>
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-ink-muted">
                   Drop the JD here, or click to browse
                 </span>
-                <span className="mt-1 text-xs text-slate-500">
+                <span className="mt-1 text-xs text-ink-faint">
                   PDF, DOCX, TXT or MD · up to 4 MB
                 </span>
               </>
             )}
           </label>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-ink-faint">
             Scanned PDFs will not work - the text has to be selectable. If yours
             is a scan, paste the text into a .txt file instead.
           </p>
@@ -326,7 +327,7 @@ export default function Tailor() {
 
         <div>
           <label className="label" htmlFor="job-title">
-            Role title <span className="text-slate-400">(optional - AI infers it)</span>
+            Role title <span className="text-ink-faint">(optional - AI infers it)</span>
           </label>
           <input
             id="job-title"
@@ -338,9 +339,9 @@ export default function Tailor() {
         </div>
 
         {/* --- Length: the student decides, one page unless they opt in -- */}
-        <fieldset className="rounded-lg border border-slate-200 p-3">
-          <legend className="px-1 text-sm font-medium text-slate-700">Resume length</legend>
-          <label className="flex items-start gap-2 text-sm text-slate-700">
+        <fieldset className="rounded-xl border border-line p-3">
+          <legend className="px-1 text-sm font-medium text-ink-muted">Resume length</legend>
+          <label className="flex items-start gap-2 text-sm text-ink-muted">
             <input
               type="radio"
               name="page-length"
@@ -350,13 +351,13 @@ export default function Tailor() {
             />
             <span>
               <strong>Keep it to one page</strong>{' '}
-              <span className="text-slate-500">
+              <span className="text-ink-faint">
                 - recommended for students and freshers. Only your most relevant
                 material makes the cut.
               </span>
             </span>
           </label>
-          <label className="mt-2 flex items-start gap-2 text-sm text-slate-700">
+          <label className="mt-2 flex items-start gap-2 text-sm text-ink-muted">
             <input
               type="radio"
               name="page-length"
@@ -366,7 +367,7 @@ export default function Tailor() {
             />
             <span>
               <strong>It can go past one page</strong>{' '}
-              <span className="text-slate-500">
+              <span className="text-ink-faint">
                 - fits more roles, projects, activities and achievements. Some
                 recruiters skim only the first page.
               </span>
@@ -378,17 +379,10 @@ export default function Tailor() {
           <button type="submit" className="btn-primary" disabled={busy || !file}>
             {busy ? 'Tailoring…' : 'Tailor my resume'}
           </button>
-          {busy && (
-            <span className="flex items-center gap-2 text-sm text-slate-500">
-              <span
-                className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600"
-                aria-hidden="true"
-              />
-              {STAGES[stage]}
-            </span>
-          )}
         </div>
       </form>
+
+      {busy && <TailorLoom stages={STAGES} stage={stage} jobTitle={jobTitle} />}
 
       {error && (
         <Alert variant="error" onDismiss={() => setError(null)}>
@@ -410,22 +404,22 @@ export default function Tailor() {
               the worst failure mode here - it produces a plausible but
               generic resume - so the student gets to see the evidence. */}
           <details className="card">
-            <summary className="cursor-pointer text-sm font-medium text-slate-700">
+            <summary className="cursor-pointer text-sm font-medium text-ink-muted">
               Read {result.source.char_count.toLocaleString()} characters from{' '}
-              {result.source.filename} — check this looks right
+              {result.source.filename} - check this looks right
             </summary>
             {/* The whole extracted text, scrollable. An excerpt ending in "…"
                 read as "the app only read this much". */}
-            <pre className="mt-3 max-h-96 overflow-y-auto rounded-lg bg-slate-50 p-3 text-xs whitespace-pre-wrap text-slate-600">
+            <pre className="mt-3 max-h-96 overflow-y-auto rounded-xl bg-surface-2 p-3 text-xs whitespace-pre-wrap text-ink-muted">
               {result.source.preview}
             </pre>
           </details>
 
           <div className="card">
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-ink">
               What this role screens for
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-ink-muted">
               {result.analysis.job_title}
               {result.analysis.company ? ` · ${result.analysis.company}` : ''} ·{' '}
               {result.analysis.seniority}
@@ -437,18 +431,18 @@ export default function Tailor() {
                 document - the results differ, so the student should know
                 which happened. */}
             {result.source.qualifications_heading ? (
-              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-                <p className="text-xs font-semibold text-emerald-800">
+              <div className="mt-3 rounded-xl border border-success/40 bg-success-wash px-3 py-2">
+                <p className="text-xs font-semibold text-success">
                   Prioritised the posting's “{result.source.qualifications_heading}”
                   section
                 </p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-slate-700">
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-ink-muted">
                   {result.source.required_qualifications.map((item, index) => (
                     <li key={index}>{item}</li>
                   ))}
                 </ul>
                 {result.source.preferred_qualifications.length > 0 && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-ink-faint">
                     Plus {result.source.preferred_qualifications.length} nice-to-have
                     {result.source.preferred_qualifications.length === 1 ? '' : 's'},
                     weighted lower.
@@ -456,7 +450,7 @@ export default function Tailor() {
                 )}
               </div>
             ) : (
-              <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <p className="mt-3 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink-muted">
                 No stated qualifications section in this posting, so the whole
                 document was used to infer what matters.
               </p>
@@ -468,7 +462,7 @@ export default function Tailor() {
                   key={keyword}
                   className={
                     result.analysis.required_keywords.includes(keyword)
-                      ? 'chip bg-emerald-100 text-emerald-800'
+                      ? 'chip bg-success-wash text-success'
                       : 'chip'
                   }
                   title={
@@ -505,7 +499,7 @@ export default function Tailor() {
             />
           )}
 
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-ink-faint">
             Read it before you send it. The AI selects and rewrites - you are
             still the one signing your name to it.
           </p>

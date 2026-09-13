@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-13T00:00:00Z",
+  "title": "Design System: ResumeMaxxer",
+  "extensions": {
+    "colorMeta": {
+      "iris": { "role": "primary", "displayName": "Electric Iris", "canonical": "#5683da" },
+      "ember": { "role": "secondary", "displayName": "Ember Pulse", "canonical": "#ff8964" },
+      "void": { "role": "neutral", "displayName": "Void", "canonical": "#090a0c" },
+      "obsidian": { "role": "neutral", "displayName": "Obsidian Canvas", "canonical": "#303236" }
+    },
+    "shadows": [
+      { "name": "frame", "value": "0 6px 25px rgb(0 0 0 / 0.5)", "purpose": "Product frames, auth dial." },
+      { "name": "float", "value": "0 4px 16px rgb(0 0 0 / 0.35)", "purpose": "Floating panels and dialogs." },
+      { "name": "iris-glow", "value": "0 0 0 1px rgb(86 131 218 / 0.5), 0 8px 28px rgb(86 131 218 / 0.45)", "purpose": "Primary button hover." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Reveals, glows, entrances." },
+      { "name": "ease-in-out-quart", "value": "cubic-bezier(0.76, 0, 0.24, 1)", "purpose": "Deliberate moves." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button", "kind": "button", "refersTo": "button-primary",
+      "description": "The one most important action per screen.",
+      "html": "<button class=\"ds-btn-primary\">Tailor my resume</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:1px solid transparent;border-radius:9999px;background:#5683da;color:#fff;font:600 14px/1 Inter,system-ui,sans-serif;letter-spacing:-0.01em;cursor:pointer;transition:background-color 200ms,box-shadow 300ms cubic-bezier(0.16,1,0.3,1)}.ds-btn-primary:hover{background:#6690e2;box-shadow:0 0 0 1px rgb(86 131 218/.5),0 8px 28px rgb(86 131 218/.45)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(86 131 218/.35)}.ds-btn-primary:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary",
+      "description": "Outlined pill that inverts on hover.",
+      "html": "<button class=\"ds-btn-secondary\">Open vault</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:1px solid #a9a9aa;border-radius:9999px;background:transparent;color:#050506;font:600 14px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:all 200ms}.ds-btn-secondary:hover{background:#050506;border-color:#050506;color:#fff}.ds-btn-secondary:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(86 131 218/.35)}"
+    },
+    {
+      "name": "White Button", "kind": "button", "refersTo": "button-white",
+      "description": "CTA on dark bands.",
+      "html": "<div style=\"background:#090a0c;padding:16px\"><button class=\"ds-btn-white\">Get started</button></div>",
+      "css": ".ds-btn-white{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:0;border-radius:9999px;background:#fff;color:#090a0c;font:600 14px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background-color 200ms}.ds-btn-white:hover{background:#e5e5e7}.ds-btn-white:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(255 255 255/.4)}"
+    },
+    {
+      "name": "Input", "kind": "input", "refersTo": "input",
+      "description": "4px hairline field with label.",
+      "html": "<label class=\"ds-label\">College</label><input class=\"ds-input\" placeholder=\"e.g. NIT Trichy\">",
+      "css": ".ds-label{display:block;margin-bottom:6px;font:500 13px Inter,system-ui,sans-serif;color:#303236}.ds-input{width:100%;min-height:44px;padding:9.6px 12.8px;border:1px solid #a9a9aa;border-radius:4px;background:#fff;color:#050506;font:15px Inter,system-ui,sans-serif;transition:border-color 160ms,box-shadow 160ms}.ds-input::placeholder{color:#5d5f64}.ds-input:hover{border-color:#5d5f64}.ds-input:focus{outline:none;border-color:#5683da;box-shadow:0 0 0 3px rgb(86 131 218/.25)}"
+    },
+    {
+      "name": "Chips", "kind": "chip", "refersTo": "chip",
+      "description": "Iris and ember category tags.",
+      "html": "<span class=\"ds-chip\">Python</span> <span class=\"ds-chip ds-chip-ember\">Must-have</span>",
+      "css": ".ds-chip{display:inline-flex;padding:4px 10px;border-radius:9999px;background:rgb(86 131 218/.12);color:#3a64b8;font:500 11px Inter,system-ui,sans-serif}.ds-chip-ember{background:rgb(255 137 100/.14);color:#b24a26}"
+    },
+    {
+      "name": "Card", "kind": "card", "refersTo": "card",
+      "description": "Hairline surface, no shadow.",
+      "html": "<div class=\"ds-card\"><strong>Backend Intern</strong><p>Payments team, 6 months.</p></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #d1d1d1;border-radius:12px;padding:24px;font:15px/1.5 Inter,system-ui,sans-serif;color:#050506}.ds-card p{margin:4px 0 0;color:#303236}"
+    },
+    {
+      "name": "Vault Dial Logo", "kind": "custom", "refersTo": "logo",
+      "description": "Iris ring, four bolts, ember core.",
+      "html": "<span class=\"ds-wordmark\"><svg viewBox=\"0 0 32 32\" width=\"28\" height=\"28\"><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"none\" stroke=\"#5683da\" stroke-width=\"2.4\"/><circle cx=\"16\" cy=\"16\" r=\"3.6\" fill=\"#ff8964\"/><path d=\"M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5\" stroke=\"#5683da\" stroke-width=\"2.4\" stroke-linecap=\"round\"/></svg>ResumeMaxxer</span>",
+      "css": ".ds-wordmark{display:inline-flex;align-items:center;gap:8px;font:600 15px Inter,system-ui,sans-serif;letter-spacing:-0.02em;color:#050506}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Aurora Vault",
+    "overview": "Picture a midnight observatory where your whole record is kept. The visual language is Huly's: a near-black void, graphite surfaces, pill controls and hairline edges. One electric iris blue and one ember coral tell the whole colour story. The aurora beam appears once per page, and here it reads as light leaking out of a vault door. Night is the native mode; in day mode the content bands turn white, but the spectacle stays dark in both themes through the .band-void scope. Nothing on screen may look like a statistic, a testimonial or a real person unless it is one.",
+    "keyCharacteristics": [
+      "Iris blue and ember coral are the only accents; everything else is graphite, white and grey.",
+      "Every button, chip, toggle and nav item is a full pill (9999px). Fields get 4px corners, cards 12px, large dark panels 30px.",
+      "Semantic tokens (bg, surface, ink, line, danger, success) change between day and night. The raw palette stays the same.",
+      "Dark spectacle bands alternate with content bands that follow the theme.",
+      "One custom line-icon set and one vault-dial mark. No emoji or unicode glyphs stand in for icons.",
+      "Motion is slow and expo-eased, and it is reduced or switched off under prefers-reduced-motion."
+    ],
+    "rules": [
+      { "name": "The Two Voices Rule", "body": "Iris and ember are the only accent colours. Add no third accent, and no status colours beyond danger and success.", "section": "colors" },
+      { "name": "The Semantic-Only Rule", "body": "Inside components, use ink, surface, line and the other semantic tokens, never raw hex, unless the element is meant to look the same in both themes.", "section": "colors" },
+      { "name": "The Void Band Rule", "body": "A section that must stay dark in both themes gets .band-void, which re-declares every night token for everything inside it.", "section": "colors" },
+      { "name": "The Display Floor Rule", "body": "General Sans is only for display text at 28px and up. Nav, buttons, labels and body text always use Inter.", "section": "typography" },
+      { "name": "The Borders-Not-Shadows Rule", "body": "Dark cards are set apart by hairline borders and surface colour steps, not drop shadows.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the semantic tokens so every screen works in day and night.",
+      "Do wrap any always-dark section in .band-void.",
+      "Do use exactly one .btn-primary per screen, and .btn-white for CTAs on dark bands.",
+      "Do take every icon from icons.tsx.",
+      "Do label sample content visibly as sample or example.",
+      "Do give every animation a finished reduced-motion state."
+    ],
+    "donts": [
+      "Don't invent statistics, user counts, success rates, logos, testimonials or quotes.",
+      "Don't add a third accent colour or use ember as a button fill.",
+      "Don't use unicode glyphs, emoji or third-party icon sets as icons.",
+      "Don't show the aurora beam more than once per page.",
+      "Don't use General Sans below 28px or for interface text.",
+      "Don't replay the VaultDoor on normal navigation."
+    ]
+  }
+}

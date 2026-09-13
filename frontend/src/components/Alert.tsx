@@ -1,13 +1,22 @@
+import { Alert as AlertIcon, Check, Close } from './icons'
+
 type Variant = 'error' | 'success' | 'info'
 
 const STYLES: Record<Variant, string> = {
-  error: 'border-red-200 bg-red-50 text-red-800',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  info: 'border-brand-200 bg-brand-50 text-brand-700',
+  error: 'bg-danger-wash border-danger/40',
+  success: 'bg-success-wash border-success/40',
+  info: 'bg-surface-2 border-line',
+}
+
+const ICON: Record<Variant, string> = {
+  error: 'text-danger',
+  success: 'text-success',
+  info: 'text-iris-fg',
 }
 
 /**
- * Inline status message.
+ * Inline status note: a bordered 12px panel with a tinted wash and a coloured
+ * icon.
  *
  * Errors use `role="alert"` so screen readers announce them immediately; the
  * quieter variants use `role="status"` so they do not interrupt.
@@ -21,20 +30,22 @@ export default function Alert({
   children: React.ReactNode
   onDismiss?: () => void
 }) {
+  const Icon = variant === 'success' ? Check : AlertIcon
   return (
     <div
       role={variant === 'error' ? 'alert' : 'status'}
-      className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${STYLES[variant]}`}
+      className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed text-ink ${STYLES[variant]}`}
     >
-      <div>{children}</div>
+      <Icon size={16} strokeWidth={2} className={`mt-0.5 shrink-0 ${ICON[variant]}`} />
+      <div className="min-w-0 flex-1">{children}</div>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="shrink-0 opacity-60 hover:opacity-100"
+          className="-mr-1 grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-ink/10 hover:text-ink"
         >
-          ×
+          <Close size={14} />
         </button>
       )}
     </div>

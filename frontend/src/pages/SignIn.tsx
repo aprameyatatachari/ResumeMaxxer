@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import Alert from '../components/Alert'
+import AuthShell from '../components/AuthShell'
+import { armVaultDoor } from '../components/VaultDoor'
 import { clearAuthToken, signIn, useSession } from '../lib/auth-client'
 
 /**
@@ -52,13 +54,14 @@ export default function SignInPage() {
     // See the note above `refetch` in the component doc: the session store
     // must reflect the new session before we navigate to a guarded route.
     await refetch()
+    if (destination === '/vault') armVaultDoor()
     navigate(destination, { replace: true })
   }
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h1>
-      <p className="mt-1 text-sm text-slate-600">Sign in to your vault.</p>
+    <AuthShell>
+      <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">Welcome back</h1>
+      <p className="mt-1 text-sm text-ink-muted">Sign in to your vault.</p>
 
       {error && (
         <div className="mt-4">
@@ -103,12 +106,12 @@ export default function SignInPage() {
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-slate-600">
+      <p className="mt-4 text-center text-sm text-ink-muted">
         No account yet?{' '}
-        <Link to="/sign-up" className="font-medium text-brand-600 hover:underline">
+        <Link to="/sign-up" className="font-medium text-iris-fg underline-offset-4 hover:underline">
           Create one
         </Link>
       </p>
-    </div>
+    </AuthShell>
   )
 }

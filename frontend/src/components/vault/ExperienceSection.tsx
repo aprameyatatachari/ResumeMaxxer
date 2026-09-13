@@ -135,7 +135,7 @@ function ExperienceForm({
         </div>
         <div>
           <label className="label" htmlFor={`${idPrefix}-end`}>
-            Ended <span className="text-slate-400">(blank = current)</span>
+            Ended <span className="text-ink-faint">(blank = current)</span>
           </label>
           <input
             id={`${idPrefix}-end`}
@@ -248,7 +248,7 @@ export default function ExperienceSection({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">{copy.heading}</h2>
+        <h2 className="text-lg font-semibold text-ink">{copy.heading}</h2>
         <button
           type="button"
           className="btn-secondary"
@@ -316,14 +316,14 @@ export default function ExperienceSection({
                     onMove={(from, to) => void move(movedIds(shown, from, to))}
                   />
                   <div>
-                    <h3 className="font-semibold text-slate-900">
+                    <h3 className="font-semibold text-ink">
                       {experience.title}{' '}
-                      <span className="font-normal text-slate-500">
+                      <span className="font-normal text-ink-faint">
                         at {experience.organization}
                       </span>
                     </h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {experience.start_date} → {experience.end_date ?? 'Present'}
+                    <p className="mt-0.5 text-xs text-ink-faint">
+                      {experience.start_date} - {experience.end_date ?? 'Present'}
                       {experience.location && ` · ${experience.location}`}
                     </p>
                   </div>
@@ -361,7 +361,7 @@ export default function ExperienceSection({
         ))}
 
         {shown.length === 0 && !adding && (
-          <p className="text-sm text-slate-500">{copy.empty}</p>
+          <p className="text-sm text-ink-faint">{copy.empty}</p>
         )}
       </div>
     </section>

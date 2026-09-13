@@ -74,7 +74,7 @@ export default function SortableCard({
             className,
             isDragging ? 'opacity-40' : '',
             // A clear landing indicator on the card being dropped onto.
-            isOver ? 'ring-2 ring-brand-500 ring-offset-2' : '',
+            isOver ? 'ring-2 ring-iris ring-offset-2' : '',
           ]
             .filter(Boolean)
             .join(' '),

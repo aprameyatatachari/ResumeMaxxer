@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import Alert from '../components/Alert'
+import AuthShell from '../components/AuthShell'
+import { armVaultDoor } from '../components/VaultDoor'
 import { clearAuthToken, signUp, useSession } from '../lib/auth-client'
 
 /** Minimum enforced by the auth service (`minPasswordLength: 8`). */
@@ -48,15 +50,16 @@ export default function SignUpPage() {
     // /sign-in while the header shows us signed in.
     clearAuthToken()
     await refetch()
+    armVaultDoor()
     navigate('/vault', { replace: true })
   }
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+    <AuthShell>
+      <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">
         Build your vault
       </h1>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-ink-muted">
         One account, every application you ever send.
       </p>
 
@@ -82,7 +85,7 @@ export default function SignUpPage() {
             onChange={(event) => setName(event.target.value)}
             placeholder="Ananya Krishnan"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-ink-faint">
             This goes at the top of your resume. You can change it later.
           </p>
         </div>
@@ -115,7 +118,7 @@ export default function SignUpPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-ink-faint">
             At least {MIN_PASSWORD_LENGTH} characters.
           </p>
         </div>
@@ -128,12 +131,12 @@ export default function SignUpPage() {
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-slate-600">
+      <p className="mt-4 text-center text-sm text-ink-muted">
         Already have an account?{' '}
-        <Link to="/sign-in" className="font-medium text-brand-600 hover:underline">
+        <Link to="/sign-in" className="font-medium text-iris-fg underline-offset-4 hover:underline">
           Sign in
         </Link>
       </p>
-    </div>
+    </AuthShell>
   )
 }

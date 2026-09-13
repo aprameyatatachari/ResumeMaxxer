@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
+import { ArrowRight } from '../components/icons'
 import EducationSection from '../components/vault/EducationSection'
 import AchievementsSection from '../components/vault/AchievementsSection'
 import ExperienceSection from '../components/vault/ExperienceSection'
@@ -51,10 +52,10 @@ export default function VaultPage() {
     <div className="space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="display-sm text-[clamp(2rem,4vw,3rem)] text-ink">
             Your vault
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-ink-muted">
             {bulletCount === 0
               ? 'Add experience below, then tailor a resume to any job description.'
               : `${bulletCount} achievement ${bulletCount === 1 ? 'line' : 'lines'} ready to tailor.`}
@@ -65,7 +66,8 @@ export default function VaultPage() {
           className={bulletCount === 0 ? 'btn-secondary' : 'btn-primary'}
           aria-disabled={bulletCount === 0}
         >
-          Tailor a resume →
+          Tailor a resume
+          <ArrowRight size={16} />
         </Link>
       </header>
 

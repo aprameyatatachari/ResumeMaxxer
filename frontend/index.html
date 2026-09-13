@@ -4,9 +4,39 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ResumeMaxxer</title>
+    <meta name="theme-color" content="#090a0c" />
+    <meta
+      name="description"
+      content="Build your vault once. Upload any job description. Get a one-page, ATS-ready resume cut for that exact role - without inventing a single line."
+    />
+    <title>ResumeMaxxer - Tailor every application</title>
+    <link rel="preload" href="/fonts/general-sans-500.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Set the theme before first paint so night mode never flashes white.
+      // Must match lib/theme.ts: 'light' | 'dark' | 'system' (the default).
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('resumemaxxer.theme')
+          var dark =
+            stored === 'dark' ||
+            ((!stored || stored === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light')
+        }
+      })()
+    </script>
   </head>
   <body>
+    <!--
+      THESIS: a vault of light - your record is kept in the dark, and each tailored resume is the beam that leaves it.
+      OWN-WORLD: Huly-style cosmic workspace (DESIGN.md): void and obsidian, electric iris action, ember warmth, one aurora beam per page.
+      STORY: the job description is the map - every requirement line is answered by one feature.
+      FIRST VIEWPORT: always-dark hero, live aurora beam leaking from the vault, display headline, iris CTA, product UI below the fold line.
+      FORM: seed e6b665bc - sticky sample JD beside scrolling feature answers; vault door on entry; made-to-measure loom while tailoring.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
