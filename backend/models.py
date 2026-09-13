@@ -126,6 +126,11 @@ class EducationLevel(str, Enum):
     CLASS_10 = "CLASS_10"  # Secondary, board exam at ~age 15
     CLASS_12 = "CLASS_12"  # Senior secondary, board exam at ~age 17
     HIGHER_ED = "HIGHER_ED"  # Bachelor's, master's, diploma
+    # One school, the whole time the student was there, with whichever of the
+    # Class X and XII results were taken at it. The alternative to separate
+    # CLASS_10 / CLASS_12 headings: one heading, results as bullets below. A
+    # student who changed schools adds one SCHOOL row per school.
+    SCHOOL = "SCHOOL"
 
 
 class Board(str, Enum):
@@ -267,16 +272,25 @@ class Education(SQLModel, table=True):
 
     Which columns apply, by level:
 
-    ==============  =========  =========  ===========
-    Column          CLASS_10   CLASS_12   HIGHER_ED
-    ==============  =========  =========  ===========
-    board           yes        yes        no
-    stream          no         yes        no
-    degree          no         no         yes
-    start_month     no         no         yes
-    end_month       no         no         yes
-    coursework      no         no         yes
-    ==============  =========  =========  ===========
+    ==================  ========  ========  =========  ======
+    Column              CLASS_10  CLASS_12  HIGHER_ED  SCHOOL
+    ==================  ========  ========  =========  ======
+    board               yes       yes       no         no
+    stream              no        yes       no         no
+    degree              no        no        yes        no
+    score, score_type   yes       yes       yes        no
+    start_year          no        no        yes        yes
+    end_year            required  required  optional   optional
+    start/end_month     no        no        yes        no
+    coursework          no        no        yes        no
+    class10_*           no        no        no         yes
+    class12_*           no        no        no         yes
+    ==================  ========  ========  =========  ======
+
+    Class X and XII rows carry only the year of passing: a board result is a
+    single moment, and the resume shows just that year. A SCHOOL row carries
+    the full tenure instead, and its results live in the class10_* / class12_*
+    columns and render as bullets under the one heading.
 
     Dates are stored as separate year/month integers, not a `date`. School
     entries are recorded by year alone and degrees by month and year, so a
@@ -318,7 +332,9 @@ class Education(SQLModel, table=True):
     degree: Optional[str] = Field(default=None, max_length=255)
 
     # --- Dates ------------------------------------------------------------
-    start_year: int
+    # Nullable because Class X / XII rows record only the year of passing.
+    # Required for HIGHER_ED and SCHOOL - `schemas.EducationCreate` enforces it.
+    start_year: Optional[int] = Field(default=None)
     end_year: Optional[int] = Field(default=None)  # None while still studying
     # Month 1-12, higher education only. None for school rows.
     start_month: Optional[int] = Field(default=None)
@@ -328,6 +344,22 @@ class Education(SQLModel, table=True):
     # String, not float: students write "92.4", "9.1/10" or "First Class".
     score: Optional[str] = Field(default=None, max_length=20)
     score_type: Optional[ScoreType] = Field(default=None, sa_type=enum_column(ScoreType))
+
+    # --- SCHOOL only: the results taken at this school ---------------------
+    # Separate columns rather than reusing board/stream/score, because one
+    # SCHOOL row can hold two results with different boards and score types.
+    # A block is present when its board is set.
+    class10_board: Optional[Board] = Field(default=None, sa_type=enum_column(Board))
+    class10_score: Optional[str] = Field(default=None, max_length=20)
+    class10_score_type: Optional[ScoreType] = Field(
+        default=None, sa_type=enum_column(ScoreType)
+    )
+    class12_board: Optional[Board] = Field(default=None, sa_type=enum_column(Board))
+    class12_stream: Optional[Stream] = Field(default=None, sa_type=enum_column(Stream))
+    class12_score: Optional[str] = Field(default=None, max_length=20)
+    class12_score_type: Optional[ScoreType] = Field(
+        default=None, sa_type=enum_column(ScoreType)
+    )
 
     # Comma-separated course names, higher education only. Denormalised on
     # purpose - it is only ever read as one blob and shipped to Gemini.

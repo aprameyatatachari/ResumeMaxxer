@@ -374,6 +374,8 @@ def _render_education(payload: ResumePayload) -> str:
             f"      {{{escape(item.institution)}}}{{{escape(item.location)}}}"
         )
         lines.append(f"      {{{qualification}}}{{{escape(item.date_range)}}}")
+        # A School entry's Class X / XII results, as bullets under its heading.
+        lines += _render_bullets(item.highlights)
     lines.append("  \\resumeSubHeadingListEnd\n")
     return "\n".join(lines)
 

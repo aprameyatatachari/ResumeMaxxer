@@ -65,6 +65,7 @@ from schemas import (
     GeneratedResumeSummary,
     JobDescriptionSource,
     QuotaStatus,
+    ResumeEducation,
     ResumePayload,
     TailorResponse,
 )
@@ -146,14 +147,30 @@ def _format_date_range(start: date, end: Optional[date]) -> str:
     return f"{started} - {finished}"
 
 
-def _format_education_dates(education: Education) -> str:
-    """Date range for one education row.
+def _board_label(board) -> str:
+    """'State Board' reads better on a resume than the enum value 'STATE'."""
+    if not board:
+        return ""
+    return "State Board" if board.value == "STATE" else board.value
 
-    School rows carry years only, degrees carry month and year, so the two
-    render differently: "2020 - 2022" versus "Aug. 2022 - May 2026". This is
-    computed here rather than asked of the AI, which has no business doing
-    arithmetic on the student's dates.
+
+def _format_education_dates(education: Education) -> str:
+    """Date text for one education row.
+
+    Three shapes, computed here rather than asked of the AI, which has no
+    business doing arithmetic on the student's dates:
+
+      Class X / XII   the year of passing only      "2022"
+      School          the whole tenure, years       "2010 - 2022"
+      Degree          month and year                "Aug. 2022 - May 2026"
     """
+    if education.level in (EducationLevel.CLASS_10, EducationLevel.CLASS_12):
+        return str(education.end_year) if education.end_year else ""
+
+    if education.start_year is None:
+        # Only a legacy or malformed row gets here; show what there is.
+        return str(education.end_year or "")
+
     if education.start_month:
         start = f"{_MONTHS[education.start_month - 1]} {education.start_year}"
     else:
@@ -170,18 +187,23 @@ def _format_education_dates(education: Education) -> str:
     return f"{start} - {end}"
 
 
-def _format_score(education: Education) -> str:
+def _score_phrase(score: Optional[str], score_type: Optional[ScoreType]) -> str:
     """'CGPA: 8.7/10' or 'Percentage: 92.4%', or empty when unscored."""
-    if not education.score:
+    if not score:
         return ""
-    if education.score_type is ScoreType.CGPA:
-        return f"CGPA: {education.score}"
-    if education.score_type is ScoreType.PERCENTAGE:
+    if score_type is ScoreType.CGPA:
+        return f"CGPA: {score}"
+    if score_type is ScoreType.PERCENTAGE:
         # Students type "92.4" or "92.4%"; do not double the sign.
-        score = education.score.strip()
-        suffix = "" if score.endswith("%") else "%"
-        return f"Percentage: {score}{suffix}"
-    return education.score
+        cleaned = score.strip()
+        return f"Percentage: {cleaned}{'' if cleaned.endswith('%') else '%'}"
+    return score
+
+
+def _format_score(education: Education) -> str:
+    """The score on the italic line. A School entry has none there - its
+    results are bullets."""
+    return _score_phrase(education.score, education.score_type)
 
 
 def _format_qualification(education: Education) -> str:
@@ -190,18 +212,143 @@ def _format_qualification(education: Education) -> str:
     Degrees use the degree text. School rows are assembled into the shape
     Indian resumes use - "CBSE - Class XII (PCMB)" - so the AI only has to copy
     it rather than compose it from enum values.
+
+    A School entry names the exams taken there, with the board when there is
+    exactly one: "CBSE - Class X & XII". Streams and scores go in its bullets,
+    one per exam, so the heading stays one short line.
     """
     if education.level is EducationLevel.HIGHER_ED:
         return education.degree or "Degree"
 
-    board = education.board.value if education.board else ""
-    if education.board and education.board.value == "STATE":
-        board = "State Board"
+    if education.level is EducationLevel.SCHOOL:
+        has10 = bool(education.class10_board)
+        has12 = bool(education.class12_board)
+        if has10 and has12:
+            exams = "Class X & XII"
+        else:
+            exams = "Class XII" if has12 else "Class X"
+        boards = {b for b in (education.class10_board, education.class12_board) if b}
+        if len(boards) == 1:
+            return f"{_board_label(next(iter(boards)))} - {exams}"
+        return exams
 
     label = "Class X" if education.level is EducationLevel.CLASS_10 else "Class XII"
     stream = f" ({education.stream.value})" if education.stream else ""
+    return f"{_board_label(education.board)} - {label}{stream}".strip(" -")
 
-    return f"{board} - {label}{stream}".strip(" -")
+
+def _school_highlights(education: Education) -> list[str]:
+    """The result bullets under a School entry, most recent exam first.
+
+    e.g. ["Class XII (PCMB): 94.2%", "Class X: 96%"]
+
+    The board is repeated in a bullet only when the two exams at this school
+    were on different boards; otherwise the heading already says it.
+    """
+    if education.level is not EducationLevel.SCHOOL:
+        return []
+
+    mixed_boards = bool(
+        education.class10_board
+        and education.class12_board
+        and education.class10_board != education.class12_board
+    )
+
+    def short_score(score: Optional[str], score_type: Optional[ScoreType]) -> str:
+        if not score:
+            return ""
+        cleaned = score.strip()
+        if score_type is ScoreType.CGPA:
+            return f"CGPA {cleaned}"
+        return cleaned if cleaned.endswith("%") else f"{cleaned}%"
+
+    lines: list[str] = []
+    for label, board, stream, score, score_type in (
+        ("Class XII", education.class12_board, education.class12_stream,
+         education.class12_score, education.class12_score_type),
+        ("Class X", education.class10_board, None,
+         education.class10_score, education.class10_score_type),
+    ):
+        if not board:
+            continue
+        name = f"{label}, {_board_label(board)}" if mixed_boards else label
+        if stream:
+            name = f"{name} ({stream.value})"
+        result = short_score(score, score_type)
+        lines.append(f"{name}: {result}" if result else name)
+    return lines
+
+
+# Most recent first: degree, then school-level rows by year, then Class X.
+_EDUCATION_ORDER = {
+    EducationLevel.HIGHER_ED: 0,
+    EducationLevel.SCHOOL: 1,
+    EducationLevel.CLASS_12: 1,
+    EducationLevel.CLASS_10: 2,
+}
+
+
+def education_entries(educations: Sequence[Education]) -> list[ResumeEducation]:
+    """Every education row as it will read on the resume, in resume order.
+
+    The single source of truth for education text. It feeds the prompt, and
+    it also replaces whatever the AI returns for education (see
+    `_rehydrate_education`), so a model that paraphrases a score or reorders a
+    School entry's bullets cannot change what the student sees.
+    """
+    ordered = sorted(
+        educations,
+        key=lambda e: (_EDUCATION_ORDER.get(e.level, 9), -(e.end_year or 9999)),
+    )
+    return [
+        ResumeEducation(
+            institution=e.institution,
+            location=e.location or "",
+            qualification=_format_qualification(e),
+            score=_format_score(e),
+            date_range=_format_education_dates(e),
+            highlights=_school_highlights(e),
+        )
+        for e in ordered
+    ]
+
+
+def _normalise(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _rehydrate_education(
+    resume: ResumePayload, entries: list[ResumeEducation]
+) -> ResumePayload:
+    """Swap the AI's education rows for the exact vault-built ones.
+
+    The AI still decides WHICH rows to keep - dropping school rows when a
+    strong work history needs the space is its call - but never how they read.
+    Each returned row is matched to a vault row by institution and
+    qualification, then by institution alone. A row that matches nothing is
+    dropped: it can only be invented, and the No Fluff rule applies to
+    education too.
+    """
+    remaining = list(entries)
+    rebuilt: list[ResumeEducation] = []
+    for item in resume.education:
+        match = next(
+            (e for e in remaining
+             if _normalise(e.institution) == _normalise(item.institution)
+             and _normalise(e.qualification) == _normalise(item.qualification)),
+            None,
+        ) or next(
+            (e for e in remaining
+             if _normalise(e.institution) == _normalise(item.institution)),
+            None,
+        )
+        if match is None:
+            logger.warning("Dropping education row not in the vault: %s", item.institution)
+            continue
+        remaining.remove(match)
+        rebuilt.append(match)
+    resume.education = rebuilt
+    return resume
 
 
 def _build_vault_context(
@@ -239,24 +386,20 @@ def _build_vault_context(
 
     # --- Education ---------------------------------------------------------
     if educations:
-        # Most recent first: degree, then Class XII, then Class X.
-        order = {
-            EducationLevel.HIGHER_ED: 0,
-            EducationLevel.CLASS_12: 1,
-            EducationLevel.CLASS_10: 2,
-        }
-        ordered = sorted(
-            educations, key=lambda e: (order.get(e.level, 9), -(e.end_year or 9999))
-        )
         sections.append("\n## EDUCATION")
-        for education in ordered:
-            sections.append(f"- institution: {education.institution}")
-            sections.append(f"  location: {education.location or ''}")
-            sections.append(f"  qualification: {_format_qualification(education)}")
-            sections.append(f"  score: {_format_score(education)}")
-            sections.append(f"  date_range: {_format_education_dates(education)}")
-            if education.coursework:
-                sections.append(f"  coursework: {education.coursework}")
+        coursework = {e.institution: e.coursework for e in educations if e.coursework}
+        for entry in education_entries(educations):
+            sections.append(f"- institution: {entry.institution}")
+            sections.append(f"  location: {entry.location}")
+            sections.append(f"  qualification: {entry.qualification}")
+            sections.append(f"  score: {entry.score}")
+            sections.append(f"  date_range: {entry.date_range}")
+            if entry.highlights:
+                sections.append("  highlights:")
+                for line in entry.highlights:
+                    sections.append(f"    * {line}")
+            if entry.institution in coursework:
+                sections.append(f"  coursework: {coursework[entry.institution]}")
 
     # --- Experience and projects ------------------------------------------
     def render_entries(heading: str, rows: Sequence, entity_type: EntityType) -> None:
@@ -515,6 +658,9 @@ async def tailor_resume(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Could not generate the resume: {exc}",
         ) from exc
+
+    # Education text comes from the vault, never from the model's paraphrase.
+    resume = _rehydrate_education(resume, education_entries(educations))
 
     # --- Step 4: store the snapshot --------------------------------------
     title = job_title or analysis.job_title or "Untitled Role"
