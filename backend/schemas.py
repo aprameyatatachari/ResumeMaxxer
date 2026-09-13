@@ -114,6 +114,14 @@ class EducationBase(BaseModel):
     class12_stream: Optional[Stream] = None
     class12_score: Optional[str] = Field(default=None, max_length=20)
     class12_score_type: Optional[ScoreType] = None
+    start_grade: Optional[str] = Field(default=None, max_length=30)
+    end_grade: Optional[str] = Field(default=None, max_length=30)
+
+    @field_validator("start_grade", "end_grade")
+    @classmethod
+    def blank_grade_is_none(cls, value: Optional[str]) -> Optional[str]:
+        """Free text; whitespace-only means not given."""
+        return (value or "").strip() or None
 
 
 class EducationCreate(EducationBase):
@@ -128,7 +136,7 @@ class EducationCreate(EducationBase):
         school_result_fields = (
             self.class10_board, self.class10_score, self.class10_score_type,
             self.class12_board, self.class12_stream, self.class12_score,
-            self.class12_score_type,
+            self.class12_score_type, self.start_grade, self.end_grade,
         )
 
         if self.level in SCHOOL_LEVELS:
@@ -153,7 +161,7 @@ class EducationCreate(EducationBase):
             if self.level is EducationLevel.CLASS_12 and not self.stream:
                 raise ValueError("stream is required for Class XII")
             if any(school_result_fields):
-                raise ValueError("class10_* / class12_* apply to School entries only")
+                raise ValueError("class10_* / class12_* and grades apply to School entries only")
 
         elif self.level is EducationLevel.SCHOOL:
             if self.board or self.stream or self.degree or self.score or self.score_type:
@@ -192,7 +200,7 @@ class EducationCreate(EducationBase):
             if self.start_year is None:
                 raise ValueError("start_year is required for higher education")
             if any(school_result_fields):
-                raise ValueError("class10_* / class12_* apply to School entries only")
+                raise ValueError("class10_* / class12_* and grades apply to School entries only")
 
         if (
             self.start_year is not None
@@ -236,6 +244,8 @@ class EducationUpdate(BaseModel):
     class12_stream: Optional[Stream] = None
     class12_score: Optional[str] = Field(default=None, max_length=20)
     class12_score_type: Optional[ScoreType] = None
+    start_grade: Optional[str] = Field(default=None, max_length=30)
+    end_grade: Optional[str] = Field(default=None, max_length=30)
 
 
 class EducationRead(EducationBase):

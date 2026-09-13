@@ -88,6 +88,8 @@ test('a student who changed schools adds one School entry for each', async ({ pa
   await page.getByRole('button', { name: 'Add qualification' }).click()
   await page.getByRole('button', { name: 'School (X & XII together)' }).click()
   await page.getByLabel('School name').fill('Kendriya Vidyalaya')
+  await page.getByLabel('From grade').fill('LKG')
+  await page.getByLabel('To grade').fill('Class X')
   await page.getByLabel('Start year').selectOption('2010')
   await page.getByLabel('End year').selectOption('2020')
   await page.getByLabel('I took Class XII at this school').uncheck()
@@ -109,7 +111,8 @@ test('a student who changed schools adds one School entry for each', async ({ pa
 
   // Each school is its own heading with its tenure, results as bullets.
   await expect(page.getByText('Kendriya Vidyalaya')).toBeVisible()
-  await expect(page.getByText('CBSE - Class X', { exact: true })).toBeVisible()
+  // Typed grades describe the span in place of the exam name.
+  await expect(page.getByText('CBSE - LKG to Class X', { exact: true })).toBeVisible()
   await expect(page.getByText('2010 - 2020')).toBeVisible()
   await expect(page.getByRole('listitem').filter({ hasText: 'Class X: 96%' })).toBeVisible()
 

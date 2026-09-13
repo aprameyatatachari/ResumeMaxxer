@@ -360,6 +360,11 @@ class Education(SQLModel, table=True):
     class12_score_type: Optional[ScoreType] = Field(
         default=None, sa_type=enum_column(ScoreType)
     )
+    # Free text, so any schooling system fits: "LKG", "Nursery", "Class 6",
+    # "Grade 1". When given they describe the span in the heading instead of
+    # the exam names.
+    start_grade: Optional[str] = Field(default=None, max_length=30)
+    end_grade: Optional[str] = Field(default=None, max_length=30)
 
     # Comma-separated course names, higher education only. Denormalised on
     # purpose - it is only ever read as one blob and shipped to Gemini.

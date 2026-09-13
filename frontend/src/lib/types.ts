@@ -119,6 +119,9 @@ export interface Education {
   class12_stream: Stream | null
   class12_score: string | null
   class12_score_type: ScoreType | null
+  /** SCHOOL only, free text: "LKG", "Class 6". Describes the span. */
+  start_grade: string | null
+  end_grade: string | null
 }
 
 export type EducationInput = Omit<Education, 'id'>

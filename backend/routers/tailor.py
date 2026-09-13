@@ -227,6 +227,15 @@ def _format_qualification(education: Education) -> str:
             exams = "Class X & XII"
         else:
             exams = "Class XII" if has12 else "Class X"
+        # Grades the student typed describe the span better than exam names:
+        # "LKG to Class XII". Free text, shown exactly as entered.
+        start, end = education.start_grade, education.end_grade
+        if start and end:
+            exams = f"{start} to {end}"
+        elif start:
+            exams = f"From {start}"
+        elif end:
+            exams = f"Up to {end}"
         boards = {b for b in (education.class10_board, education.class12_board) if b}
         if len(boards) == 1:
             return f"{_board_label(next(iter(boards)))} - {exams}"
