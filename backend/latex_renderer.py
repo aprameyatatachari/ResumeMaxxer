@@ -58,6 +58,14 @@ def api_url() -> str:
     return os.getenv("LATEX_API_URL", "http://localhost:2020").rstrip("/")
 
 
+def key_fingerprint(key: str) -> str:
+    """'len=64 sha256=1a2b3c4d' - enough to tell two keys apart in a log,
+    useless for recovering either. Matches the LaTeX container's startup line."""
+    import hashlib
+
+    return f"len={len(key)} sha256={hashlib.sha256(key.encode()).hexdigest()[:8]}"
+
+
 def api_key() -> str:
     """Shared secret for the compiler, sent as `x-api-key`.
 
@@ -487,10 +495,18 @@ def compile_pdf(latex: str) -> bytes:
         ) from exc
 
     if response.status_code == 401:
+        # Compare against the compiler's startup log line, which prints the
+        # same fingerprint. Never log the key itself.
+        logger.error(
+            "LaTeX service rejected the API key: sent %s (LATEX_API_KEY %s)",
+            key_fingerprint(api_key()),
+            "set" if os.getenv("LATEX_API_KEY") else "UNSET - using the dev default",
+        )
         raise LatexRenderError(
             "The PDF service rejected our API key. LATEX_API_KEY must match "
-            "the compiler's API_KEY (docker-compose.yml locally; on Vercel "
-            "the container falls back to LATEX_API_KEY when API_KEY is unset)."
+            "the compiler's key: API_KEY in docker-compose.yml locally, or "
+            "LATEX_API_KEY itself on Vercel. Compare the key fingerprints in "
+            "the API and LaTeX service logs."
         )
     if response.status_code != 200:
         # The service returns a generic message; the specific TeX error is in
