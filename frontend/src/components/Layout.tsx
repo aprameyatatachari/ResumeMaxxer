@@ -5,7 +5,7 @@ import { clearAuthToken, signOut, useSession } from '../lib/auth-client'
 import { LogoMark, Wordmark } from './brand/Logo'
 import { Close, Menu } from './icons'
 import ThemeToggle from './ThemeToggle'
-import VaultDoor from './VaultDoor'
+import WelcomeLoader from './WelcomeLoader'
 
 function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -138,7 +138,7 @@ export default function Layout() {
         )}
       </header>
 
-      {location.pathname === '/vault' && <VaultDoor />}
+      {location.pathname === '/vault' && <WelcomeLoader />}
 
       <main
         className={

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import AuroraBeam from '../components/landing/AuroraBeam'
+import SiteImage from '../components/SiteImage'
 import { ArrowRight, Check, FileText, Lock } from '../components/icons'
 import { useReveal } from '../hooks/useReveal'
 import { useSession } from '../lib/auth-client'
@@ -136,7 +137,12 @@ export default function Landing() {
     <>
       {/* Hero - always dark: light leaking out of the vault. */}
       <section className="band-void relative isolate overflow-hidden px-4 pb-24 pt-36 sm:px-6 sm:pt-44">
-        <AuroraBeam className="pointer-events-none absolute inset-0 -z-10 h-full w-full" />
+        <SiteImage
+          src="/images/hero-vault.webp"
+          eager
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-70 [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+        />
+        <AuroraBeam className="pointer-events-none absolute inset-0 -z-10 h-full w-full mix-blend-screen" />
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-void"
           aria-hidden="true"
@@ -299,6 +305,10 @@ export default function Landing() {
 
       {/* Final CTA. */}
       <section className="band-void relative isolate overflow-hidden px-4 py-28 text-center sm:px-6">
+        <SiteImage
+          src="/images/cta-vault.webp"
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover opacity-50"
+        />
         <div className="glow-ember pointer-events-none absolute inset-0 -z-10 [&::before]:left-1/2 [&::before]:top-auto [&::before]:-bottom-40 [&::before]:h-[520px] [&::before]:w-[820px] [&::before]:-translate-x-1/2" aria-hidden="true" />
         <h2 className="display mx-auto max-w-[16ch] text-[clamp(2.25rem,6vw,4.25rem)] text-white" data-reveal>
           Open your vault before the next deadline.

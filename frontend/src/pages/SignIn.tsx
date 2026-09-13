@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import Alert from '../components/Alert'
 import AuthShell from '../components/AuthShell'
-import { armVaultDoor } from '../components/VaultDoor'
 import { clearAuthToken, signIn, useSession } from '../lib/auth-client'
 
 /**
@@ -54,7 +53,6 @@ export default function SignInPage() {
     // See the note above `refetch` in the component doc: the session store
     // must reflect the new session before we navigate to a guarded route.
     await refetch()
-    if (destination === '/vault') armVaultDoor()
     navigate(destination, { replace: true })
   }
 

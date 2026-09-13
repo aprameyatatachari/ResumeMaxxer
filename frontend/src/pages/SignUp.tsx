@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import Alert from '../components/Alert'
 import AuthShell from '../components/AuthShell'
-import { armVaultDoor } from '../components/VaultDoor'
+import { armWelcome } from '../components/WelcomeLoader'
 import { clearAuthToken, signUp, useSession } from '../lib/auth-client'
 
 /** Minimum enforced by the auth service (`minPasswordLength: 8`). */
@@ -50,7 +50,7 @@ export default function SignUpPage() {
     // /sign-in while the header shows us signed in.
     clearAuthToken()
     await refetch()
-    armVaultDoor()
+    armWelcome()
     navigate('/vault', { replace: true })
   }
 
