@@ -1,16 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 
 const GLYPHS = 'abcdeghknopqrsuvxyz0123456789' // narrow glyphs, so rolling letters stay inside their slot
-const STEP_MS = 55 // how often an unsettled letter rolls to a new glyph
-const STAGGER_MS = 32 // gap between neighbouring letters clicking into place
-const SPIN_MS = 380 // how long the first letter rolls before it settles
+const STEP_MS = 50 // how often an unsettled letter rolls to a new glyph
+const SPIN_MS = 220 // how long the first letter rolls before it settles
+const CLICK_MS = 300 // length of the settle animation (matches index.css)
+const TOTAL_MS = 1000 // the whole headline is set within this
+const MAX_STAGGER_MS = 30
 
 /**
  * A headline that unlocks like a combination dial.
  *
  * On entering the viewport every letter rolls through random characters, and
  * they click into place one by one from left to right. Plays again each time
- * the heading scrolls back into view.
+ * the heading scrolls back into view. The whole headline is set within one
+ * second however long it is, and letters start scrambled (set before first
+ * paint) so the real text never flashes before the roll.
  *
  * - Each letter keeps the width of its final character (an invisible copy
  *   sizes the box), so rolling glyphs never reflow the line.
@@ -32,7 +36,7 @@ export default function DialText({
   const rootRef = useRef<HTMLElement>(null)
   const glyphRefs = useRef<HTMLSpanElement[]>([])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = rootRef.current
     if (!root) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -41,6 +45,19 @@ export default function DialText({
     const finals = glyphs.map((el) => el.dataset.char ?? '')
     let frame = 0
     let playing = false
+    const stagger = Math.min(
+      MAX_STAGGER_MS,
+      (TOTAL_MS - SPIN_MS - CLICK_MS) / Math.max(glyphs.length - 1, 1),
+    )
+    const randomGlyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0]
+    const scramble = () => {
+      glyphs.forEach((el) => {
+        el.classList.remove('is-set')
+        el.classList.add('is-rolling')
+        el.textContent = randomGlyph()
+      })
+    }
+    scramble()
 
     const settleAll = () => {
       glyphs.forEach((el, i) => {
@@ -64,7 +81,7 @@ export default function DialText({
         let done = true
         glyphs.forEach((el, i) => {
           if (!el.classList.contains('is-rolling')) return
-          if (t >= SPIN_MS + i * STAGGER_MS) {
+          if (t >= SPIN_MS + i * stagger) {
             el.textContent = finals[i]
             el.classList.remove('is-rolling')
             // Restart the click animation.
@@ -76,7 +93,7 @@ export default function DialText({
           const step = Math.floor(t / STEP_MS)
           if (step !== lastStep[i]) {
             lastStep[i] = step
-            el.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0]
+            el.textContent = randomGlyph()
           }
         })
         if (done) {
@@ -94,7 +111,7 @@ export default function DialText({
           if (!playing) play()
         } else if (!playing) {
           // Scramble again off-screen so the next entrance replays.
-          glyphs.forEach((el) => el.classList.remove('is-set'))
+          scramble()
         }
       },
       { threshold: 0.35 },
