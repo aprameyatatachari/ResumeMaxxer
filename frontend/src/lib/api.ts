@@ -10,6 +10,8 @@
  */
 
 import type {
+  Achievement,
+  AchievementInput,
   Bullet,
   BulletInput,
   Education,
@@ -264,6 +266,19 @@ export function createApiClient(getToken: TokenGetter) {
     reorderProjects: (ids: number[]) =>
       request<void>(getToken, '/api/vault/project/order', { method: 'PUT', ...json({ ids }) }),
 
+    // --- Achievements -----------------------------------------------------
+    createAchievement: (data: AchievementInput) =>
+      request<Achievement>(getToken, '/api/vault/achievement', { method: 'POST', ...json(data) }),
+    updateAchievement: (id: number, data: Partial<AchievementInput>) =>
+      request<Achievement>(getToken, `/api/vault/achievement/${id}`, {
+        method: 'PATCH',
+        ...json(data),
+      }),
+    deleteAchievement: (id: number) =>
+      request<void>(getToken, `/api/vault/achievement/${id}`, { method: 'DELETE' }),
+    reorderAchievements: (ids: number[]) =>
+      request<void>(getToken, '/api/vault/achievement/order', { method: 'PUT', ...json({ ids }) }),
+
     // --- Extra profile links ----------------------------------------------
     createLink: (data: ProfileLinkInput) =>
       request<ProfileLink>(getToken, '/api/vault/link', { method: 'POST', ...json(data) }),
@@ -304,10 +319,13 @@ export function createApiClient(getToken: TokenGetter) {
 
     // --- Tailoring --------------------------------------------------------
     /** Upload a job description file (PDF/DOCX/TXT/MD) and tailor a resume. */
-    tailor: (file: File, jobTitle?: string) => {
+    /** `allowMultiplePages` is the student's explicit choice to let the
+     *  resume run past one page; the backend defaults to one. */
+    tailor: (file: File, jobTitle?: string, allowMultiplePages = false) => {
       const form = new FormData()
       form.append('file', file)
       if (jobTitle) form.append('job_title', jobTitle)
+      if (allowMultiplePages) form.append('allow_multiple_pages', 'true')
       return request<TailorResponse>(getToken, '/api/tailor', {
         method: 'POST',
         body: form,

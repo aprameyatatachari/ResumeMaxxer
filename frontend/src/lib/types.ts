@@ -91,6 +91,18 @@ export interface ProfileLink {
 
 export type ProfileLinkInput = Omit<ProfileLink, 'id'>
 
+/** One line in the Achievements section, printed exactly as entered. */
+export interface Achievement {
+  id: number
+  title: string
+  description: string
+  /** Free text: "Mar. 2024", "2023". */
+  date_text: string
+  include_on_resume: boolean
+}
+
+export type AchievementInput = Omit<Achievement, 'id'>
+
 export type UserUpdate = Partial<
   Pick<
     User,
@@ -189,6 +201,7 @@ export interface BulletInput {
 export interface Vault {
   user: User
   links: ProfileLink[]
+  achievements: Achievement[]
   educations: Education[]
   experiences: Experience[]
   projects: Project[]
@@ -280,6 +293,12 @@ export interface ResumeExperience {
   bullets: string[]
 }
 
+export interface ResumeAchievement {
+  title: string
+  description: string
+  date: string
+}
+
 export interface ResumeProject {
   name: string
   tech_stack: string
@@ -298,6 +317,9 @@ export interface ResumePayload {
   experience: ResumeExperience[]
   projects: ResumeProject[]
   skills: SkillCategory[]
+  /** Absent on resumes generated before these sections existed. */
+  extracurriculars?: ResumeExperience[]
+  achievements?: ResumeAchievement[]
   /** Why the AI picked these entries. Shown in the preview, never printed. */
   selection_rationale: string
 }

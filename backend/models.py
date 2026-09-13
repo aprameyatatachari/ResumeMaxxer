@@ -270,6 +270,10 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    achievements: list["Achievement"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -560,6 +564,39 @@ class ProfileLink(SQLModel, table=True):
     position: int = Field(default=0)
 
     user: Optional[User] = Relationship(back_populates="links")
+
+
+class Achievement(SQLModel, table=True):
+    """One line in the resume's Achievements section: a hackathon win, a
+    scholarship, a competitive-programming rating, a published paper.
+
+    Deliberately not AI-written. An achievement is a claim about a result, and
+    rewording one is exactly where embellishment creeps in ("finalist" becoming
+    "winner"), so the resume prints what the student entered, in their order.
+    Unlike experiences these have no bullets - one line each is the convention.
+
+    Extracurriculars are NOT here: they already live in `Experience` with
+    `type=EXTRACURRICULAR`, because they have the same shape (a role, an
+    organisation, dates, bullets). They render in their own resume section.
+    """
+
+    __tablename__ = "achievements"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(
+        foreign_key="users.id", ondelete="CASCADE", index=True, max_length=255
+    )
+
+    # "Winner, Smart India Hackathon" - printed in bold.
+    title: str = Field(max_length=200)
+    # "1st of 400 teams, national round" - optional, after the title.
+    description: str = Field(default="", max_length=300)
+    # Free text rather than a date: "Mar. 2024", "2023", "2022 - 2024".
+    date_text: str = Field(default="", max_length=40)
+    include_on_resume: bool = Field(default=True)
+    position: int = Field(default=0)
+
+    user: Optional[User] = Relationship(back_populates="achievements")
 
 
 class GeneratedResume(SQLModel, table=True):

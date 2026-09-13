@@ -163,6 +163,39 @@ class ProfileLinkRead(BaseModel):
     include_on_resume: bool
 
 
+class AchievementCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=300)
+    date_text: str = Field(default="", max_length=40)
+    include_on_resume: bool = True
+
+    @field_validator("title", "description", "date_text")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return (value or "").strip()
+
+
+class AchievementUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=300)
+    date_text: Optional[str] = Field(default=None, max_length=40)
+    include_on_resume: Optional[bool] = None
+
+    @field_validator("title", "description", "date_text")
+    @classmethod
+    def strip_text(cls, value: Optional[str]) -> Optional[str]:
+        return None if value is None else value.strip()
+
+
+class AchievementRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    description: str
+    date_text: str
+    include_on_resume: bool
+
+
 class OrderUpdate(BaseModel):
     """The complete new order of one section, first to last.
 
@@ -436,6 +469,7 @@ class VaultRead(BaseModel):
 
     user: UserRead
     links: list[ProfileLinkRead] = []
+    achievements: list[AchievementRead] = []
     educations: list[EducationRead]
     experiences: list[ExperienceRead]
     projects: list[ProjectRead]
@@ -751,11 +785,20 @@ class SkillCategory(BaseModel):
     items: str = Field(description="Comma-separated skills in that category.")
 
 
-class ResumePayload(BaseModel):
-    """The complete one-page resume, ready to render.
+class ResumeAchievement(BaseModel):
+    """One line in the Achievements section. Copied from the vault, never
+    written by the model."""
 
-    Section order is fixed by the template: Education, Experience, Projects,
-    Technical Skills.
+    title: str
+    description: str = ""
+    date: str = ""
+
+
+class ResumePayload(BaseModel):
+    """The complete resume, ready to render.
+
+    Section order is fixed: Education, Experience, Projects, Technical Skills,
+    then the optional Extracurricular Activities and Achievements.
     """
 
     header: ResumeHeader
@@ -765,6 +808,15 @@ class ResumePayload(BaseModel):
     experience: list[ResumeExperience]
     projects: list[ResumeProject]
     skills: list[SkillCategory] = Field(description="3-4 categories.")
+    extracurriculars: list[ResumeExperience] = Field(
+        default_factory=list,
+        description="Clubs, societies, leadership and volunteering roles from "
+        "the vault's EXTRACURRICULARS list. Same shape as experience.",
+    )
+    achievements: list[ResumeAchievement] = Field(
+        default_factory=list,
+        description="Filled from the vault automatically; return an empty list.",
+    )
 
     # Shown in the preview so the student can judge the AI's choices before
     # sending the resume. Deliberately NOT rendered onto the document - the

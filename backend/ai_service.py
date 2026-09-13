@@ -31,6 +31,7 @@ import logging
 import os
 import re
 import threading
+from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
 from google import genai
@@ -67,6 +68,59 @@ MAX_ENTRIES_TOTAL = 4  # experiences + projects combined
 MAX_BULLETS_PER_ENTRY = 4
 MAX_SKILL_CATEGORIES = 4
 MAX_SKILLS_PER_CATEGORY = 12
+
+
+@dataclass(frozen=True)
+class PageLimits:
+    """How much content a resume may carry.
+
+    Two presets. `ONE_PAGE` is the default and the convention for students:
+    the caps were set so the worst case still fits one page, verified by
+    compiling it (tests/test_latex_compile.py). `MULTI_PAGE` is for a student
+    who has explicitly said a longer resume is fine - larger, but still capped,
+    so "allow more than a page" never means "include everything".
+    """
+
+    education: int
+    entries_total: int  # experiences + projects combined
+    bullets_per_entry: int
+    skill_categories: int
+    extracurriculars: int
+    extracurricular_bullets: int
+    achievements: int
+    description: str  # what the prompt tells the model about length
+
+
+ONE_PAGE = PageLimits(
+    education=MAX_EDUCATION,
+    entries_total=MAX_ENTRIES_TOTAL,
+    bullets_per_entry=MAX_BULLETS_PER_ENTRY,
+    skill_categories=MAX_SKILL_CATEGORIES,
+    # The two optional sections get small budgets on one page: they add
+    # height below everything else, and a resume that spills onto a second
+    # page by three lines is worse than one without them. Measured, not
+    # guessed: with every other section at its cap, 2 extracurriculars or 4
+    # achievements (one wrapping onto two lines) push the document to a
+    # second page; 1 and 3 fit. tests/test_latex_compile.py pins this.
+    extracurriculars=1,
+    extracurricular_bullets=2,
+    achievements=3,
+    description="The resume MUST fit on one page.",
+)
+
+MULTI_PAGE = PageLimits(
+    education=6,
+    entries_total=8,
+    bullets_per_entry=5,
+    skill_categories=6,
+    extracurriculars=5,
+    extracurricular_bullets=4,
+    achievements=10,
+    description=(
+        "The student has agreed the resume may run past one page. Still be "
+        "selective - include what strengthens the application, not everything."
+    ),
+)
 
 
 class AIServiceError(RuntimeError):
@@ -270,26 +324,34 @@ def enforce_no_fabrication(generated: str, source_corpus: str) -> str:
 
 def _trim_entry(
     entry: ResumeExperience | ResumeProject,
+    max_bullets: int = MAX_BULLETS_PER_ENTRY,
 ) -> ResumeExperience | ResumeProject:
-    entry.bullets = [b.strip() for b in entry.bullets if b.strip()][
-        :MAX_BULLETS_PER_ENTRY
-    ]
+    entry.bullets = [b.strip() for b in entry.bullets if b.strip()][:max_bullets]
     return entry
 
 
-def enforce_one_page(payload: ResumePayload) -> ResumePayload:
-    """Trim the payload down to something that physically fits on one page.
+def enforce_one_page(payload: ResumePayload, limits: PageLimits = ONE_PAGE) -> ResumePayload:
+    """Trim the payload to the page budget - one page unless the student chose
+    otherwise.
 
-    Caps follow product.md section 5, adjusted for the Indian convention of
-    listing board results: at most 3 education rows (degree, Class XII, Class
-    X), 4 experiences and projects combined, 4 bullets each, and 4 skill
-    categories. Experience is filled before projects, since paid work outranks
-    side projects when space runs out.
+    One-page caps follow product.md section 5, adjusted for the Indian
+    convention of listing board results: at most 3 education rows, 4
+    experiences and projects combined, 4 bullets each, 4 skill categories, plus
+    small budgets for extracurriculars and achievements. Experience is filled
+    before projects, since paid work outranks side projects when space runs
+    out. Idempotent, so it is safe to apply again after later steps.
     """
-    payload.education = payload.education[:MAX_EDUCATION]
+    payload.education = payload.education[: limits.education]
 
-    payload.experience = [_trim_entry(e) for e in payload.experience]
-    payload.projects = [_trim_entry(p) for p in payload.projects]
+    payload.experience = [_trim_entry(e, limits.bullets_per_entry) for e in payload.experience]
+    payload.projects = [_trim_entry(p, limits.bullets_per_entry) for p in payload.projects]
+    payload.extracurriculars = [
+        _trim_entry(e, limits.extracurricular_bullets)
+        for e in payload.extracurriculars[: limits.extracurriculars]
+    ]
+    payload.achievements = [
+        a for a in payload.achievements if a.title.strip()
+    ][: limits.achievements]
 
     # Same reasoning as every other cap here: the prompt asks for at most five
     # technologies, this makes it true. An imported repo often carries a dozen,
@@ -298,11 +360,11 @@ def enforce_one_page(payload: ResumePayload) -> ResumePayload:
         project.tech_stack = latex_renderer.trim_tech_stack(project.tech_stack)
 
     # Budget: experience first, projects fill whatever is left.
-    experience_budget = min(len(payload.experience), MAX_ENTRIES_TOTAL)
+    experience_budget = min(len(payload.experience), limits.entries_total)
     payload.experience = payload.experience[:experience_budget]
-    payload.projects = payload.projects[: MAX_ENTRIES_TOTAL - experience_budget]
+    payload.projects = payload.projects[: limits.entries_total - experience_budget]
 
-    payload.skills = payload.skills[:MAX_SKILL_CATEGORIES]
+    payload.skills = payload.skills[: limits.skill_categories]
     for category in payload.skills:
         items = [item.strip() for item in category.items.split(",") if item.strip()]
         category.items = ", ".join(items[:MAX_SKILLS_PER_CATEGORY])
@@ -470,8 +532,11 @@ def tailor_resume(
     student_email: str,
     qualifications_block: str = "",
     api_key: Optional[str] = None,
+    limits: PageLimits = ONE_PAGE,
 ) -> ResumePayload:
-    """Produce the final resume payload for @react-pdf/renderer.
+    """Produce the final resume payload.
+
+    `limits` is ONE_PAGE unless the student chose to allow a longer resume.
 
     `vault_context` is a plain-text rendering of the student's filtered Vault
     (built by `routers/tailor.py`). Passing pre-filtered text rather than the
@@ -502,7 +567,8 @@ were inferred from the document as a whole. Weight them evenly.
 """
 
     prompt = f"""
-Build a tailored, one-page, ATS-friendly resume for an Indian college student.
+Build a tailored, ATS-friendly resume for an Indian college student.
+{limits.description}
 
 TARGET ROLE: {analysis.job_title} ({analysis.seniority})
 COMPANY: {analysis.company or "(not stated)"}
@@ -523,11 +589,13 @@ Instructions:
    qualifications section is given above, relevance means "answers one of
    those requirements", not "sounds impressive".
 
-2. HARD LIMITS (going over means it does not fit on one page):
-   - at most 3 education rows
-   - at most 4 experience and project entries COMBINED
-   - at most 4 bullets per entry
-   - at most 4 skill categories
+2. LENGTH: {limits.description} HARD LIMITS:
+   - at most {limits.education} education rows
+   - at most {limits.entries_total} experience and project entries COMBINED
+   - at most {limits.bullets_per_entry} bullets per experience or project
+   - at most {limits.skill_categories} skill categories
+   - at most {limits.extracurriculars} extracurricular entries, each with at
+     most {limits.extracurricular_bullets} bullets
 
 3. REWRITE each selected bullet to mirror the job description's language,
    without claiming anything the vault does not support.
@@ -554,6 +622,12 @@ Instructions:
    most relevant to this job description first. The vault often holds a dozen
    for an imported repo; listing them all wraps the heading onto a second line
    and reads as noise. Comma-separated, e.g. "Python, FastAPI, PostgreSQL".
+
+7b. EXTRACURRICULARS: entries from the vault's EXTRACURRICULARS list go in
+    `extracurriculars`, never in `experience`. Same rules as experience: copy
+    `date_range`, `organization` and `location` verbatim, rewrite only the
+    bullets. Prefer ones showing leadership or skills this role values; leave
+    the list empty rather than padding it.
 
 8. SKILLS: group into 3-4 categories with bold labels, exactly like a technical
    resume - "Languages", "Frameworks", "Developer Tools", "Libraries",
@@ -586,10 +660,10 @@ Note there is no summary or objective section. Do not invent one.
         api_key=api_key,
     )
 
-    # Guardrails: no invented numbers, then hard-trim to one page.
-    for entry in [*payload.experience, *payload.projects]:
+    # Guardrails: no invented numbers, then hard-trim to the page budget.
+    for entry in [*payload.experience, *payload.projects, *payload.extracurriculars]:
         entry.bullets = [
             enforce_no_fabrication(bullet, vault_context) for bullet in entry.bullets
         ]
 
-    return enforce_one_page(payload)
+    return enforce_one_page(payload, limits)

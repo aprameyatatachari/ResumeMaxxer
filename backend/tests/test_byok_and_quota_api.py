@@ -73,12 +73,12 @@ def ai_fixture(monkeypatch):
 
     seen = {}
 
-    def analyse(jd_text, qualifications_block="", api_key=None):
+    def analyse(jd_text, qualifications_block="", api_key=None, limits=None):
         seen["analyse_key"] = api_key
         return ANALYSIS
 
     def tailor(*, analysis, vault_context, student_name, student_email,
-               qualifications_block="", api_key=None):
+               qualifications_block="", api_key=None, limits=None):
         seen["tailor_key"] = api_key
         return RESUME
 
@@ -229,7 +229,7 @@ def test_an_obviously_malformed_key_fails_fast(client, vault, ai, bad_key, reaso
 def test_a_rejected_key_is_a_400_not_a_502(client, vault, monkeypatch):
     """The student can fix their own key in seconds. A 502 would tell them to
     wait and retry, which would never work."""
-    def reject(jd_text, qualifications_block="", api_key=None):
+    def reject(jd_text, qualifications_block="", api_key=None, limits=None):
         raise ai_service.InvalidApiKeyError("Google rejected that API key.")
 
     monkeypatch.setattr(ai_service, "analyse_job_description", reject)
@@ -249,7 +249,7 @@ def test_a_failed_run_is_not_charged(client, vault, session, user, monkeypatch):
     """With three runs a week, losing one to our own failure costs a student a
     third of their week. The allowance is charged only after the resume is
     stored."""
-    def boom(jd_text, qualifications_block="", api_key=None):
+    def boom(jd_text, qualifications_block="", api_key=None, limits=None):
         raise ai_service.AIServiceError("Gemini fell over.")
 
     monkeypatch.setattr(ai_service, "analyse_job_description", boom)

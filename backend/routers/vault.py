@@ -22,8 +22,20 @@ from sqlmodel import Session, SQLModel, delete, select
 
 from auth import get_current_user
 from database import get_session
-from models import Bullet, Education, EntityType, Experience, ProfileLink, Project, User
+from models import (
+    Achievement,
+    Bullet,
+    Education,
+    EntityType,
+    Experience,
+    ProfileLink,
+    Project,
+    User,
+)
 from schemas import (
+    AchievementCreate,
+    AchievementRead,
+    AchievementUpdate,
     BulletCreate,
     BulletRead,
     BulletUpdate,
@@ -196,6 +208,10 @@ def read_vault(
         links=[
             ProfileLinkRead.model_validate(link, from_attributes=True)
             for link in _list_owned(session, ProfileLink, current_user.id)
+        ],
+        achievements=[
+            AchievementRead.model_validate(a, from_attributes=True)
+            for a in _list_owned(session, Achievement, current_user.id)
         ],
         educations=[
             EducationRead.model_validate(e, from_attributes=True)
@@ -546,6 +562,58 @@ def delete_link(
     session: Session = Depends(get_session),
 ) -> Response:
     row = _owned_or_404(session, ProfileLink, link_id, current_user.id)
+    session.delete(row)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Achievements
+# ---------------------------------------------------------------------------
+@router.post("/achievement", response_model=AchievementRead,
+             status_code=status.HTTP_201_CREATED, summary="Add an achievement")
+def create_achievement(
+    payload: AchievementCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Achievement:
+    row = Achievement(
+        **payload.model_dump(),
+        user_id=current_user.id,
+        position=next_position(session, Achievement, current_user.id),
+    )
+    return _commit(session, row)
+
+
+@router.put("/achievement/order", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Set the order of achievements")
+def order_achievements(
+    payload: OrderUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    _reorder(session, Achievement, current_user.id, payload.ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/achievement/{achievement_id}", response_model=AchievementRead)
+def update_achievement(
+    achievement_id: int,
+    payload: AchievementUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Achievement:
+    row = _owned_or_404(session, Achievement, achievement_id, current_user.id)
+    return _commit(session, _apply_patch(row, payload))
+
+
+@router.delete("/achievement/{achievement_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_achievement(
+    achievement_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    row = _owned_or_404(session, Achievement, achievement_id, current_user.id)
     session.delete(row)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
