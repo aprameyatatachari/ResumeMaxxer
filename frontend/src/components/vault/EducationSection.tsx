@@ -70,6 +70,8 @@ const EMPTY = {
   class12_stream: '' as Stream | '',
   class12_score: '',
   class12_score_type: 'PERCENTAGE' as ScoreType,
+  start_grade: '',
+  end_grade: '',
 }
 
 type FormState = typeof EMPTY
@@ -88,7 +90,14 @@ function describe(education: Education): string {
   if (education.level === 'SCHOOL') {
     const has10 = Boolean(education.class10_board)
     const has12 = Boolean(education.class12_board)
-    const exams = has10 && has12 ? 'Class X & XII' : has12 ? 'Class XII' : 'Class X'
+    const start = education.start_grade
+    const end = education.end_grade
+    // Mirrors the backend: typed grades describe the span when given.
+    const exams =
+      start && end ? `${start} to ${end}`
+        : start ? `From ${start}`
+          : end ? `Up to ${end}`
+            : has10 && has12 ? 'Class X & XII' : has12 ? 'Class XII' : 'Class X'
     const boards = new Set([education.class10_board, education.class12_board].filter(Boolean))
     return boards.size === 1
       ? `${boardLabel([...boards][0] as Board)} - ${exams}`
@@ -325,7 +334,7 @@ function toPayload(form: FormState): EducationInput {
     score: null, score_type: null, coursework: '',
     class10_board: null, class10_score: null, class10_score_type: null,
     class12_board: null, class12_stream: null, class12_score: null,
-    class12_score_type: null,
+    class12_score_type: null, start_grade: null, end_grade: null,
   }
   const base = {
     ...none,
@@ -366,6 +375,8 @@ function toPayload(form: FormState): EducationInput {
         ...base,
         start_year: year(form.start_year),
         end_year: year(form.end_year),
+        start_grade: form.start_grade.trim() || null,
+        end_grade: form.end_grade.trim() || null,
         ...(form.has_class10 && {
           class10_board: (form.class10_board || null) as Board | null,
           class10_score: s10 || null,
@@ -667,6 +678,38 @@ export default function EducationSection({
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* --- School: grade span, free text for any system -------- */}
+          {isSchool && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="start-grade">
+                  From grade <span className="text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="start-grade"
+                  className="input"
+                  maxLength={30}
+                  value={form.start_grade}
+                  onChange={(event) => update('start_grade', event.target.value)}
+                  placeholder="LKG"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="end-grade">
+                  To grade <span className="text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="end-grade"
+                  className="input"
+                  maxLength={30}
+                  value={form.end_grade}
+                  onChange={(event) => update('end_grade', event.target.value)}
+                  placeholder="Class XII"
+                />
+              </div>
             </div>
           )}
 

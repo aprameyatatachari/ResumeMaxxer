@@ -372,3 +372,33 @@ def test_school_bullets_reach_the_latex_document():
     heading_at = tex.index("{DPS}")
     bullet_at = tex.index(r"\resumeItem{Class X: 96\%}")
     assert heading_at < bullet_at
+
+
+# ---------------------------------------------------------------------------
+# Grade span on a School entry
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "start, end, expected",
+    [
+        pytest.param("LKG", "Class XII", "CBSE - LKG to Class XII", id="both-grades"),
+        pytest.param("Nursery", None, "CBSE - From Nursery", id="only-start"),
+        pytest.param(None, "Grade 10", "CBSE - Up to Grade 10", id="only-end"),
+        pytest.param(None, None, "CBSE - Class X & XII", id="no-grades-falls-back"),
+    ],
+)
+def test_typed_grades_describe_the_school_span(start, end, expected):
+    row = _school(class10_board=Board.CBSE, class12_board=Board.CBSE,
+                  class12_stream=Stream.PCM, start_grade=start, end_grade=end)
+    assert _format_qualification(row) == expected
+
+
+def test_grades_are_free_text_and_blank_means_absent():
+    entry = EducationCreate(**{**SCHOOL, "start_grade": "  ", "end_grade": " Std. 12 "})
+    assert entry.start_grade is None
+    assert entry.end_grade == "Std. 12"
+
+
+def test_grades_only_apply_to_school_entries():
+    with pytest.raises(ValidationError) as exc:
+        EducationCreate(**{**CLASS_10, "start_grade": "LKG"})
+    assert "grades apply to School entries only" in str(exc.value)
