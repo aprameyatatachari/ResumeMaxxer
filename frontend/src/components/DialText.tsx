@@ -2,10 +2,10 @@ import { useLayoutEffect, useRef } from 'react'
 
 const GLYPHS = 'abcdeghknopqrsuvxyz0123456789' // narrow glyphs, so rolling letters stay inside their slot
 const STEP_MS = 55 // how often an unsettled letter rolls to a new glyph
-const ROLL_MS = 160 // how long each letter rolls after it appears
+const ROLL_MS = 200 // how long each letter rolls after it appears
 const CLICK_MS = 240 // length of the settle animation (matches index.css)
-const TOTAL_MS = 1000 // the whole headline is set within this
-const MAX_STAGGER_MS = 45
+const TOTAL_MS = 1300 // the whole headline is set within this
+const MAX_STAGGER_MS = 55
 
 /**
  * A headline that unlocks like a combination dial.
@@ -13,7 +13,7 @@ const MAX_STAGGER_MS = 45
  * On entering the viewport the letters appear one by one from left to right;
  * each rolls through a few random characters before clicking into place.
  * Plays again each time the heading scrolls back into view. The whole
- * headline is set within one second however long it is, and letters start
+ * headline is set within 1.3 seconds however long it is, and letters start
  * hidden (set before first paint) so the real text never flashes first.
  *
  * - Each letter keeps the width of its final character (an invisible copy
