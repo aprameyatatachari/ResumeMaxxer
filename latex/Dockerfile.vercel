@@ -74,9 +74,15 @@ EXPOSE 3000
 # ---------------------------------------------------------------------------
 #  API key
 # ---------------------------------------------------------------------------
-#  Upstream checks `x-api-key` against process.env.API_KEY and rejects every
-#  request when that is unset. The backend sends LATEX_API_KEY. On Vercel both
-#  services share one set of project environment variables, so instead of
-#  asking for the same secret twice under two names, API_KEY falls back to
-#  LATEX_API_KEY. An explicit API_KEY still wins.
-CMD ["sh", "-c", "export API_KEY=\"${API_KEY:-$LATEX_API_KEY}\"; exec bun src/index.ts"]
+#  Upstream checks `x-api-key` against process.env.API_KEY. The backend sends
+#  LATEX_API_KEY. On Vercel both services read one set of project variables, so
+#  LATEX_API_KEY is the single source of truth: when it is set it WINS over
+#  API_KEY. An earlier version let API_KEY win, and a stray API_KEY that differed
+#  by a character silently rejected every PDF. API_KEY is only a fallback now,
+#  for running the image without LATEX_API_KEY.
+#
+#  The startup line logs a fingerprint - length and the first 8 hex chars of a
+#  SHA-256 - never the key. backend/latex_renderer.py logs the same fingerprint
+#  for the key it sends, so a mismatch is visible in the logs without exposing
+#  the secret.
+CMD ["sh", "-c", "export API_KEY=\"${LATEX_API_KEY:-$API_KEY}\"; echo \"latex: key fingerprint len=${#API_KEY} sha256=$(printf %s \"$API_KEY\" | sha256sum | cut -c1-8)\"; exec bun src/index.ts"]
