@@ -43,22 +43,22 @@ export default function WelcomeLoader() {
   return (
     <div className="welcome-stage" aria-hidden="true">
       <div className="flex flex-col items-center">
-        <svg viewBox="0 0 32 32" width={64} height={64} fill="none">
+        <svg viewBox="0 0 32 32" width={64} height={64} fill="none" className="text-ink">
           <circle
             className="welcome-ring"
             cx="16"
             cy="16"
             r="10"
-            stroke="#5683da"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             transform="rotate(-90 16 16)"
           />
-          <circle className="welcome-core" cx="16" cy="16" r="3.6" fill="#ff8964" />
+          <circle className="welcome-core" cx="16" cy="16" r="3.6" fill="#c9aaff" />
         </svg>
         <p className="mt-6 text-sm text-ink-muted">Setting up your vault</p>
         <div className="mt-3 h-px w-40 overflow-hidden bg-line">
-          <div className="welcome-bar h-full w-full bg-iris" />
+          <div className="welcome-bar h-full w-full bg-[image:var(--iridescent)]" />
         </div>
       </div>
     </div>

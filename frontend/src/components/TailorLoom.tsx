@@ -24,29 +24,29 @@ export default function TailorLoom({
   jobTitle: string
 }) {
   return (
-    <div className="band-void glow-ember grid gap-8 overflow-hidden rounded-[30px] border border-line p-6 sm:grid-cols-[220px_1fr] sm:p-10">
+    <div className="band-void glow-ember grid gap-8 overflow-hidden rounded-[40px] border border-line p-6 sm:grid-cols-[220px_1fr] sm:p-10">
       <div
         className="relative mx-auto aspect-[1/1.3] w-full max-w-[220px] overflow-hidden rounded-[4px] bg-white p-5"
         style={{ '--loom-travel': '290px' } as React.CSSProperties}
         aria-hidden="true"
       >
-        <div className="mx-auto h-2.5 w-1/2 rounded-full bg-[#050506]" />
-        <div className="mx-auto mt-1.5 h-1.5 w-3/4 rounded-full bg-[#a9a9aa]" />
+        <div className="mx-auto h-2.5 w-1/2 rounded-full bg-[#1a1a1a]" />
+        <div className="mx-auto mt-1.5 h-1.5 w-3/4 rounded-full bg-[#c4c4c4]" />
         <div className="mt-4 space-y-3">
           {SECTIONS.slice(0, stage + 1).map((lines, s) => (
             <div key={s} className="space-y-1">
-              <div className="loom-line h-1.5 w-1/3 rounded-full bg-[#5683da]" />
+              <div className="loom-line h-1.5 w-1/3 rounded-full bg-[#839aff]" />
               {lines.map((w, i) => (
                 <div
                   key={i}
-                  className="loom-line h-1 rounded-full bg-[#d1d1d1]"
+                  className="loom-line h-1 rounded-full bg-[#e6e6e6]"
                   style={{ width: `${w}%`, animationDelay: `${(i + 1) * 110}ms` }}
                 />
               ))}
             </div>
           ))}
         </div>
-        <div className="loom-thread pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-[#ff8964] to-transparent shadow-[0_0_18px_4px_rgba(255,137,100,0.55)]" />
+        <div className="loom-thread pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-[#c9aaff] to-transparent shadow-[0_0_18px_4px_rgba(201,170,255,0.6)]" />
       </div>
 
       <div className="flex flex-col justify-center">
@@ -64,11 +64,11 @@ export default function TailorLoom({
             >
               <span
                 className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
-                  i < stage ? 'border-iris bg-iris text-white' : i === stage ? 'border-ember' : 'border-line-strong'
+                  i < stage ? 'border-ink bg-ink text-bg' : i === stage ? 'border-iris' : 'border-line-strong'
                 }`}
               >
                 {i < stage && <Check size={12} strokeWidth={2.6} />}
-                {i === stage && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember" />}
+                {i === stage && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-iris" />}
               </span>
               {label}
             </li>

@@ -1,32 +1,18 @@
 /* ==========================================================================
-   ResumeMaxxer - "Aurora vault" system (see DESIGN.md)
+   ResumeMaxxer - "Monochrome vault" system (see DESIGN.md)
 
-   A midnight workspace: obsidian and void canvases, graphite cards with
-   hairline edges, pill controls, and a two-colour story told by one electric
-   iris blue and one ember coral. The aurora beam appears once per page, as
-   light leaking out of the vault. Night is the native mode; day mode flips
-   the content bands to white while the spectacle stays dark.
+   After the Conicorn template: a white-and-graphite page, Geist set huge and
+   tight, pill everything, fat rounded cards with a dark dotted well, black &
+   white imagery, and one iridescent pastel gradient (lilac, butter, blush,
+   sky, periwinkle) reserved for the hero headline and focal moments.
+   Day is native; night inverts the greys and keeps the gradient.
    ========================================================================== */
 @import 'tailwindcss';
 
-/* UI: Inter (variable). Display: General Sans, the listed substitute for
-   Esbuild, self-hosted under the ITF Free Font License. */
 @font-face {
-  font-family: 'Inter';
-  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  font-family: 'Geist';
+  src: url('@fontsource-variable/geist/files/geist-latin-wght-normal.woff2') format('woff2-variations');
   font-weight: 100 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/general-sans-500.woff2') format('woff2');
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/general-sans-600.woff2') format('woff2');
-  font-weight: 600;
   font-display: swap;
 }
 
@@ -34,80 +20,74 @@
 
 /* --- Raw palette -------------------------------------------------------- */
 :root {
-  --obsidian: #303236;
-  --void: #090a0c;
-  --charcoal: #111111;
-  --slate-edge: #4a4b50;
-  --iron-veil: #6b6c6d;
-  --smoke: #95979e;
-  --ash: #a9a9aa;
-  --frost: #d1d1d1;
-  --linen: #e5e5e7;
-  --snow: #ffffff;
-  --iris: #5683da;
-  --ember: #ff8964;
-  --molasses: #5a250a;
+  --void: #0a0a0a;
+  --graphite: #1a1a1a;
+  --iri-lilac: #c9aaff;
+  --iri-butter: #feffbc;
+  --iri-blush: #ffcdfd;
+  --iri-sky: #b3e2ff;
+  --iri-peri: #839aff;
+  --iridescent: linear-gradient(90deg, #c9aaff, #feffbc 25%, #ffcdfd 50%, #b3e2ff 75%, #839aff);
+  /* Kept names so every screen restyles: iris = periwinkle, ember = lilac. */
+  --iris: #839aff;
+  --ember: #c9aaff;
 }
 
 /* --- Day ---------------------------------------------------------------- */
 :root {
   color-scheme: light;
   --bg: #ffffff;
-  --bg-2: #f6f6f6;
+  --bg-2: #f4f4f4;
   --surface: #ffffff;
-  --surface-2: #f6f6f6;
-  --ink: #050506;
-  --ink-muted: #303236;
-  --ink-faint: #5d5f64;
-  --line: #d1d1d1;
-  --line-strong: #a9a9aa;
-  --tag-fg-iris: #3a64b8;
-  --focus-ring-solid: #3d6bc9;
-  --tag-fg-ember: #b24a26;
+  --surface-2: #f4f4f4;
+  --ink: #1a1a1a;
+  --ink-muted: #4d4d4d;
+  --ink-faint: #6e6e6e;
+  --line: #e6e6e6;
+  --line-strong: #c4c4c4;
+  --tag-fg-iris: #3f52c4;
+  --tag-fg-ember: #6b3fc4;
   --danger: #b3261e;
   --danger-wash: #fdecea;
   --success: #1f7a4d;
   --success-wash: #e6f4ec;
-  --focus-ring: rgb(86 131 218 / 0.35);
-  --elev: 0 4px 6px rgb(0 0 0 / 0.08);
+  --focus-ring-solid: #1a1a1a;
+  --cta-bg: #1a1a1a;
+  --cta-fg: #ffffff;
+  --cta-hover: #000000;
 }
 
-/* --- Night -------------------------------------------------------------- */
+/* --- Night (and always-dark bands) -------------------------------------- */
 [data-theme='dark'],
 .band-void {
   color-scheme: dark;
-  --bg: #0b0c0e;
-  --bg-2: #303236;
-  --surface: #111111;
-  --surface-2: #1a1b1e;
-  --ink: #ffffff;
-  --ink-muted: #c2c3c7;
-  --ink-faint: #a0a2a8;
-  --line: #2c2d31;
-  --line-strong: #4a4b50;
-  --tag-fg-iris: #8fb0ef;
-  --focus-ring-solid: #ffffff;
-  --tag-fg-ember: #ffb095;
+  --bg: #0a0a0a;
+  --bg-2: #141414;
+  --surface: #121212;
+  --surface-2: #1b1b1b;
+  --ink: #f5f5f5;
+  --ink-muted: #c2c2c2;
+  --ink-faint: #9a9a9a;
+  --line: #262626;
+  --line-strong: #3d3d3d;
+  --tag-fg-iris: #b3c2ff;
+  --tag-fg-ember: #dcc8ff;
   --danger: #ff9b8f;
   --danger-wash: #2a1412;
   --success: #7fd6a8;
   --success-wash: #0f231a;
-  --focus-ring: rgb(255 255 255 / 0.4);
-  --elev: 0 4px 16px rgb(0 0 0 / 0.35);
+  --focus-ring-solid: #ffffff;
+  --cta-bg: #f5f5f5;
+  --cta-fg: #0a0a0a;
+  --cta-hover: #ffffff;
 }
 
 @theme inline {
-  --color-obsidian: var(--obsidian);
   --color-void: var(--void);
-  --color-charcoal: var(--charcoal);
-  --color-slate-edge: var(--slate-edge);
-  --color-smoke: var(--smoke);
-  --color-ash: var(--ash);
-  --color-frost: var(--frost);
+  --color-graphite: var(--graphite);
   --color-iris: var(--iris);
   --color-iris-fg: var(--tag-fg-iris);
   --color-ember: var(--ember);
-  --color-molasses: var(--molasses);
 
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
@@ -123,11 +103,8 @@
   --color-success: var(--success);
   --color-success-wash: var(--success-wash);
 
-  --font-display: 'General Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-
-  --shadow-frame: 0 6px 25px rgb(0 0 0 / 0.5);
-  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.35);
+  --font-display: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
@@ -138,7 +115,6 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
-
   body {
     background: var(--bg);
     color: var(--ink);
@@ -146,35 +122,26 @@
     font-size: 15px;
     line-height: 1.5;
     letter-spacing: -0.01em;
-    font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     transition: background-color 300ms ease, color 300ms ease;
   }
-
   ::selection {
-    background: rgb(86 131 218 / 0.45);
-    color: #fff;
+    background: var(--iri-lilac);
+    color: #0a0a0a;
   }
-
   :focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus-ring-solid);
   }
-
   input[type='checkbox'],
   input[type='radio'] {
-    accent-color: var(--iris);
+    accent-color: var(--ink);
     width: 1rem;
     height: 1rem;
   }
-
   @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
-    *,
-    *::before,
-    *::after {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
@@ -183,56 +150,90 @@
 }
 
 @layer components {
-  /* --- Display type ------------------------------------------------------ */
+  /* --- Type ---------------------------------------------------------------- */
   .display {
     font-family: var(--font-display);
-    font-weight: 500;
-    line-height: 0.9;
-    letter-spacing: -0.05em;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.06em;
     text-wrap: balance;
   }
   .display-sm {
-    text-wrap: balance;
     font-family: var(--font-display);
     font-weight: 500;
-    line-height: 1;
+    line-height: 1.05;
     letter-spacing: -0.045em;
+    text-wrap: balance;
+  }
+  /* The iridescent headline. Hero and one focal line per page, never body. */
+  .text-iridescent {
+    background: var(--iridescent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* "001 • WHO WE ARE" section marker: <p class="section-mark" data-num="001"><span>Label</span></p> */
+  .section-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .section-mark::before {
+    content: attr(data-num);
+  }
+  .section-mark > span::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 0.6rem;
+    border-radius: 9999px;
+    background: var(--ink);
+    vertical-align: middle;
+    translate: 0 -1px;
   }
 
-  /* --- Buttons: pills ----------------------------------------------------- */
+  /* --- Buttons: pills -------------------------------------------------------- */
   .btn,
   .btn-primary,
   .btn-secondary,
   .btn-danger,
-  .btn-white {
+  .btn-white,
+  .btn-glass,
+  .btn-iridescent {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 2.75rem;
-    padding: 0.625rem 1.35rem;
+    min-height: 44px;
+    padding: 0 1.35rem;
+    border-radius: 1024px;
     border: 1px solid transparent;
-    border-radius: 9999px;
-    font-family: var(--font-sans);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     letter-spacing: -0.01em;
-    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
     transition:
       background-color 200ms ease,
-      border-color 200ms ease,
       color 200ms ease,
-      box-shadow 300ms var(--ease-out-expo),
-      transform 200ms ease;
+      border-color 200ms ease,
+      box-shadow 250ms ease,
+      transform 200ms var(--ease-out-expo);
   }
   .btn:active:not(:disabled),
   .btn-primary:active:not(:disabled),
   .btn-secondary:active:not(:disabled),
   .btn-danger:active:not(:disabled),
-  .btn-white:active:not(:disabled) {
-    transform: translateY(1px);
+  .btn-white:active:not(:disabled),
+  .btn-glass:active:not(:disabled),
+  .btn-iridescent:active:not(:disabled) {
+    transform: scale(0.97);
   }
   .btn:disabled,
   .btn-primary:disabled,
@@ -241,156 +242,185 @@
   .btn-white:disabled,
   [aria-disabled='true'].btn-primary,
   [aria-disabled='true'].btn-secondary {
-    cursor: not-allowed;
     opacity: 0.45;
+    cursor: not-allowed;
   }
-
-  /* The one most important action per screen. */
   .btn-primary {
-    background: #3d6bc9;
-    color: #fff;
+    background: var(--cta-bg);
+    color: var(--cta-fg);
   }
   .btn-primary:not(:disabled):hover {
-    background: #355fb5;
-    box-shadow: 0 0 0 1px rgb(86 131 218 / 0.5), 0 8px 28px rgb(86 131 218 / 0.45);
+    background: var(--cta-hover);
+    box-shadow: 0 0 0 4px rgb(131 154 255 / 0.18), 0 10px 30px -10px rgb(131 154 255 / 0.6);
   }
-
   .btn-secondary {
     background: transparent;
-    border-color: var(--line-strong);
     color: var(--ink);
+    border-color: var(--line-strong);
   }
   .btn-secondary:not(:disabled):hover {
-    background: var(--ink);
     border-color: var(--ink);
-    color: var(--bg);
   }
-
+  /* White pill - the CTA on dark imagery. */
   .btn-white {
-    background: #fff;
-    color: #090a0c;
+    background: #f2f2f2;
+    color: #0a0a0a;
   }
   .btn-white:not(:disabled):hover {
-    background: #e5e5e7;
+    background: #ffffff;
   }
-
+  /* Iridescent-ringed dark pill (hero). */
+  .btn-iridescent {
+    background:
+      linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+      var(--iridescent) border-box;
+    border: 1.5px solid transparent;
+    color: #fff;
+  }
+  .btn-iridescent:not(:disabled):hover {
+    box-shadow: 0 0 28px -4px rgb(201 170 255 / 0.55);
+  }
+  /* Frosted pill over imagery. */
+  .btn-glass {
+    background: rgb(255 255 255 / 0.16);
+    color: #fff;
+    border-color: rgb(255 255 255 / 0.18);
+    backdrop-filter: blur(14px);
+  }
+  .btn-glass:not(:disabled):hover {
+    background: rgb(255 255 255 / 0.26);
+  }
   .btn-danger {
     background: transparent;
     color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 45%, transparent);
   }
   .btn-danger:not(:disabled):hover {
     background: var(--danger-wash);
   }
-
   .text-xs.btn-secondary,
   .text-xs.btn-danger,
   .text-xs.btn-primary {
-    min-height: 2.25rem;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.8125rem;
+    min-height: 34px;
+    padding: 0 0.95rem;
+    font-size: 13px;
   }
 
-  /* --- Fields: 4px radius, hairline -------------------------------------- */
+  /* --- Fields ---------------------------------------------------------------- */
   .input {
+    display: block;
     width: 100%;
-    min-height: 2.75rem;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--surface);
+    min-height: 44px;
+    padding: 0.6rem 0.95rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
     color: var(--ink);
-    font-size: 0.9375rem;
+    font-size: 14px;
     transition:
       border-color 160ms ease,
-      box-shadow 160ms ease;
+      box-shadow 160ms ease,
+      background-color 160ms ease;
   }
-  .input::placeholder {
-    color: var(--ink-faint);
-  }
-  .input:hover {
-    border-color: var(--ink-faint);
-  }
+  .input::placeholder { color: var(--ink-faint); }
+  .input:hover { border-color: var(--line-strong); }
   .input:focus {
     outline: none;
+    background: var(--surface);
     border-color: var(--focus-ring-solid);
     box-shadow: 0 0 0 1px var(--focus-ring-solid);
   }
   select.input {
     appearance: none;
     padding-right: 2.25rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2395979e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%238a8a8a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.8rem center;
+    background-position: right 0.95rem center;
   }
-  textarea.input {
-    line-height: 1.5;
-  }
-
+  textarea.input { line-height: 1.5; }
   .label {
     display: block;
-    margin-bottom: 0.375rem;
-    font-size: 0.8125rem;
+    margin-bottom: 0.4rem;
+    font-size: 13px;
     font-weight: 500;
     color: var(--ink-muted);
   }
 
-  /* --- Surfaces ----------------------------------------------------------- */
+  /* --- Surfaces -------------------------------------------------------------- */
   .card {
-    background: var(--surface);
+    border-radius: 28px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    background: var(--surface);
     padding: 1.5rem;
   }
-
-  /* Tag chip: category colour at 12% behind the full-strength text. */
-  .chip {
+  .chip,
+  .chip-ember {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: 9999px;
-    background: rgb(86 131 218 / 0.12);
-    color: var(--tag-fg-iris);
-    font-size: 0.6875rem;
+    min-height: 26px;
+    padding: 0 0.7rem;
+    border-radius: 1024px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0;
+    background: var(--surface-2);
+    color: var(--ink-muted);
+    border: 1px solid var(--line);
   }
   .chip-ember {
-    background: rgb(255 137 100 / 0.14);
+    background: rgb(201 170 255 / 0.18);
+    border-color: rgb(201 170 255 / 0.4);
     color: var(--tag-fg-ember);
   }
-
-  /* A dark spectacle band - stays dark in both themes. */
   .band-void {
-    background: var(--void);
-    color: #fff;
-    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
   }
-
-  /* Corner glow: warm radial glow bleeding from a card edge. */
-  .glow-ember {
+  /* Soft iridescent bloom in a card corner. */
+  .glow-ember,
+  .glow-iris {
     position: relative;
     isolation: isolate;
     overflow: hidden;
   }
-  .glow-ember::before {
+  .glow-ember::before,
+  .glow-iris::before {
     content: '';
     position: absolute;
     z-index: -1;
-    width: 320px;
-    height: 320px;
-    right: -120px;
-    top: -140px;
+    width: 340px;
+    height: 340px;
+    right: -140px;
+    top: -160px;
     border-radius: 9999px;
-    background: radial-gradient(circle, rgb(255 170 129 / 0.4), rgb(255 218 159 / 0.12) 45%, transparent 70%);
+    background: radial-gradient(circle, rgb(201 170 255 / 0.4), rgb(255 205 253 / 0.18) 40%, transparent 70%);
     pointer-events: none;
   }
   .glow-iris::before {
-    background: radial-gradient(circle, rgb(86 131 218 / 0.45), rgb(86 131 218 / 0.1) 45%, transparent 70%);
+    background: radial-gradient(circle, rgb(131 154 255 / 0.4), rgb(179 226 255 / 0.16) 40%, transparent 70%);
+  }
+  /* Dark dotted well - the top of the feature cards. */
+  .dot-well {
+    background-color: #111;
+    background-image: radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px);
+    background-size: 12px 12px;
+    box-shadow: inset 0 2px 30px rgb(0 0 0 / 0.8), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+  /* Glossy orb holding a feature icon. */
+  .orb {
+    display: grid;
+    place-items: center;
+    border-radius: 9999px;
+    color: #fff;
+    background: radial-gradient(circle at 35% 28%, #8a8a8a, #3b3b3b 55%, #1c1c1c);
+    box-shadow:
+      0 0 0 10px rgb(255 255 255 / 0.04),
+      0 0 0 22px rgb(255 255 255 / 0.025),
+      inset 0 1px 1px rgb(255 255 255 / 0.4),
+      0 18px 40px rgb(0 0 0 / 0.6);
   }
 
-  /* --- Scroll reveal ----------------------------------------------------- */
-  /* Visible by default; hidden-then-revealed only once armed by script. */
+  /* --- Scroll reveal ------------------------------------------------------- */
   html.reveal-armed [data-reveal]:not(.is-in) {
     opacity: 0;
     transform: translateY(24px);
@@ -406,6 +436,39 @@
       filter 1000ms var(--ease-out-expo);
     transition-delay: var(--reveal-delay, 0ms);
   }
+}
+
+/* --- Marquee ---------------------------------------------------------------- */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+.marquee__track {
+  display: flex;
+  flex-shrink: 0;
+  animation: marquee 40s linear infinite;
+}
+@keyframes marquee {
+  to { transform: translateX(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; }
+}
+
+/* --- Monochrome imagery ------------------------------------------------------ */
+.mono {
+  filter: grayscale(1) contrast(1.05);
+}
+.hero-image {
+  animation: hero-settle 2400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes hero-settle {
+  from { transform: scale(1.08); filter: grayscale(1) contrast(1.05) brightness(0); }
+  to { transform: scale(1); filter: grayscale(1) contrast(1.05) brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-image { animation: none; }
 }
 
 /* --- Welcome loader ------------------------------------------------------- */
@@ -464,18 +527,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .loom-thread, .loom-line { animation: none; }
-}
-
-/* --- Hero image settle ---------------------------------------------------- */
-.hero-image {
-  animation: hero-settle 2400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes hero-settle {
-  from { transform: scale(1.08); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-image { animation: none; }
 }
 
 /* --- Dial text ------------------------------------------------------------ */
