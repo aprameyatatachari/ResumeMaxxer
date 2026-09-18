@@ -58,7 +58,7 @@ export default function WelcomeLoader() {
         </svg>
         <p className="mt-6 text-sm text-ink-muted">Setting up your vault</p>
         <div className="mt-3 h-px w-40 overflow-hidden bg-line">
-          <div className="welcome-bar h-full w-full bg-[image:var(--iridescent)]" />
+          <div className="welcome-bar h-full w-full iri-flow bg-[image:var(--iridescent)]" />
         </div>
       </div>
     </div>

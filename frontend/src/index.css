@@ -27,7 +27,8 @@
   --iri-blush: #ffcdfd;
   --iri-sky: #b3e2ff;
   --iri-peri: #839aff;
-  --iridescent: linear-gradient(90deg, #c9aaff, #feffbc 25%, #ffcdfd 50%, #b3e2ff 75%, #839aff);
+  /* Mirrored so it loops seamlessly when the flow animation slides it. */
+  --iridescent: linear-gradient(90deg, #c9aaff, #feffbc 12.5%, #ffcdfd 25%, #b3e2ff 37.5%, #839aff 50%, #b3e2ff 62.5%, #ffcdfd 75%, #feffbc 87.5%, #c9aaff);
   /* Kept names so every screen restyles: iris = periwinkle, ember = lilac. */
   --iris: #839aff;
   --ember: #c9aaff;
@@ -168,6 +169,12 @@
   /* The iridescent headline. Hero and one focal line per page, never body. */
   .text-iridescent {
     background: var(--iridescent);
+    background-size: 200% 100%;
+    animation: iri-flow 8s linear infinite;
+    /* Tight tracking lets the last glyph overhang its box, and background-clip
+       only paints inside the box - pad the ink area so it is never cut. */
+    padding-inline: 0.06em;
+    margin-inline: -0.06em;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -274,6 +281,8 @@
     background:
       linear-gradient(#0a0a0a, #0a0a0a) padding-box,
       var(--iridescent) border-box;
+    background-size: 100% 100%, 200% 100%;
+    animation: iri-flow-border 8s linear infinite;
     border: 1.5px solid transparent;
     color: #fff;
   }
@@ -586,4 +595,18 @@
 @keyframes split-cue {
   0%, 100% { transform: translateY(-6px); opacity: 0.4; }
   50% { transform: translateY(6px); opacity: 1; }
+}
+
+/* --- Iridescent flow --------------------------------------------------------- */
+.iri-flow {
+  background-size: 200% 100%;
+  animation: iri-flow 8s linear infinite;
+}
+@keyframes iri-flow {
+  from { background-position: 0% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes iri-flow-border {
+  from { background-position: 0 0, 0% 0; }
+  to { background-position: 0 0, -200% 0; }
 }

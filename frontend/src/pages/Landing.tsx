@@ -173,7 +173,7 @@ export default function Landing() {
                     className="display flex items-center gap-10 whitespace-nowrap pr-10 text-[clamp(3.5rem,10vw,8.5rem)] text-ink/15"
                   >
                     {fact}
-                    <span className="h-4 w-4 rounded-full bg-[image:var(--iridescent)]" />
+                    <span className="h-4 w-4 rounded-full iri-flow bg-[image:var(--iridescent)]" />
                   </span>
                 ))}
               </div>
@@ -266,7 +266,7 @@ export default function Landing() {
                         } ${heading ? 'font-medium' : ''} ${i === 0 ? 'text-base' : ''}`}
                       >
                         <span
-                          className={`absolute inset-0 rounded-[14px] bg-[image:var(--iridescent)] transition-opacity duration-500 ${
+                          className={`absolute inset-0 rounded-[14px] iri-flow bg-[image:var(--iridescent)] transition-opacity duration-500 ${
                             lit ? 'opacity-100' : 'opacity-0'
                           }`}
                           aria-hidden="true"
@@ -357,7 +357,7 @@ export default function Landing() {
                 'Every tailored resume kept in your history',
               ].map((item) => (
                 <li key={item} className="flex gap-3">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[image:var(--iridescent)] text-[#0a0a0a]">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full iri-flow bg-[image:var(--iridescent)] text-[#0a0a0a]">
                     <Check size={12} strokeWidth={2.6} />
                   </span>
                   {item}

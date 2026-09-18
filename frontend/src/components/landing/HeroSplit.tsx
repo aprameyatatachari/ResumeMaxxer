@@ -126,10 +126,10 @@ export default function HeroSplit({ primary }: { primary: { to: string; label: s
 
         {/* The wordmark. Decorative: the nav already names the product. */}
         <p className="split-word display pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center whitespace-nowrap text-[clamp(3rem,13.5vw,15rem)] leading-none" aria-hidden="true">
-          <span className="split-left text-iridescent inline-block pb-[0.08em] [background-position:0%_0] [background-size:200%_100%]">
+          <span className="split-left text-iridescent inline-block pb-[0.08em]">
             Resume
           </span>
-          <span className="split-right text-iridescent inline-block pb-[0.08em] [background-position:100%_0] [background-size:200%_100%]">
+          <span className="split-right text-iridescent inline-block pb-[0.08em]">
             Maxxer
           </span>
         </p>
