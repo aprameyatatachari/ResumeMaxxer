@@ -24,7 +24,7 @@ export default function ThemeToggle() {
       onClick={() => setChoice(next)}
       aria-label={`${LABEL[choice]}. Switch to ${LABEL[next].toLowerCase()}`}
       title={LABEL[choice]}
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line text-ink-muted transition-colors duration-200 hover:border-line-strong hover:text-ink"
+      className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-white/10 hover:text-ink"
     >
       <Icon size={17} />
     </button>

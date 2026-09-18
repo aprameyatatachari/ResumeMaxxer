@@ -13,7 +13,7 @@ function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
       to={to}
       className={({ isActive }) =>
         `inline-flex min-h-10 items-center rounded-full px-3.5 text-sm transition-colors duration-200 ${
-          isActive ? 'bg-ink/10 text-ink' : 'text-ink-muted hover:text-ink'
+          isActive ? 'bg-white/12 text-white' : 'text-ink-muted hover:text-white'
         }`
       }
     >
@@ -30,17 +30,9 @@ export default function Layout() {
   const signedIn = Boolean(session?.user)
   const onLanding = location.pathname === '/'
   const [menuOpen, setMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
 
   // Close the mobile menu whenever the route changes.
   useEffect(() => setMenuOpen(false), [location.pathname])
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   async function handleSignOut() {
     await signOut()
@@ -58,58 +50,33 @@ export default function Layout() {
     </>
   ) : null
 
-  // On the landing page the header floats over the always-dark hero.
-  const headerTone = onLanding
-    ? `band-void ${scrolled ? 'bg-void/80 border-line' : 'bg-transparent border-transparent'} fixed inset-x-0`
-    : `sticky ${scrolled ? 'bg-bg/80 border-line' : 'bg-bg border-transparent'}`
+  // One floating cluster, dark glass on every page: a round home mark and a
+  // pill holding the navigation, the account and the call to action.
+  const glass =
+    'border border-white/10 bg-[rgb(20_20_20/0.9)] shadow-[0_10px_30px_-10px_rgb(0_0_0/0.6)] backdrop-blur-xl'
 
   return (
     <div className="flex min-h-screen flex-col bg-bg text-ink">
-      <header
-        className={`${headerTone} top-0 z-40 border-b backdrop-blur-md transition-colors duration-300`}
-      >
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-3 px-4 sm:px-6">
-          <Link to="/" className="text-ink" aria-label="ResumeMaxxer home">
-            <Wordmark />
+      <header className="band-void pointer-events-none fixed inset-x-0 top-0 z-40 !bg-transparent px-3 pt-4">
+        <div className="pointer-events-auto mx-auto flex w-fit max-w-full items-center gap-2">
+          <Link
+            to="/"
+            aria-label="ResumeMaxxer home"
+            className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-white transition-transform duration-300 hover:rotate-45 ${glass}`}
+          >
+            <LogoMark size={30} />
           </Link>
 
-          {/* Render nothing while the session resolves, rather than flashing
-              "Sign in" at someone who is already signed in. */}
-          {!isPending && (
-            <>
-              <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
-                {links}
-              </nav>
-
-              <div className="flex items-center gap-2">
-                {signedIn ? (
-                  <>
-                    <span className="hidden max-w-56 truncate text-sm text-ink-faint lg:inline">
-                      {session?.user.email}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => void handleSignOut()}
-                      className="btn-secondary text-xs hidden md:inline-flex"
-                    >
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/sign-in" className="btn-secondary text-xs">
-                      Sign in
-                    </Link>
-                    <Link to="/sign-up" className="btn-primary text-xs">
-                      Get started
-                    </Link>
-                  </>
-                )}
-                <ThemeToggle />
+          <div className={`flex min-h-12 items-center gap-1 rounded-full p-1 pl-2 ${glass}`}>
+            <ThemeToggle />
+            {/* Render nothing while the session resolves, rather than flashing
+                "Sign in" at someone who is already signed in. */}
+            {!isPending && (
+              <>
                 {signedIn && (
                   <button
                     type="button"
-                    className="grid h-10 w-10 place-items-center rounded-full border border-line text-ink md:hidden"
+                    className="grid h-10 w-10 place-items-center rounded-full text-white md:hidden"
                     aria-expanded={menuOpen}
                     aria-controls="mobile-nav"
                     aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -118,20 +85,49 @@ export default function Layout() {
                     {menuOpen ? <Close size={18} /> : <Menu size={18} />}
                   </button>
                 )}
-              </div>
-            </>
-          )}
+                <nav className="hidden items-center md:flex" aria-label="Main">
+                  {links}
+                </nav>
+                {signedIn && (
+                  <span className="hidden max-w-48 truncate px-2 text-xs text-ink-muted lg:inline">
+                    {session?.user.email}
+                  </span>
+                )}
+                {signedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleSignOut()}
+                    className="btn-white hidden min-h-10 md:inline-flex"
+                  >
+                    Sign out
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      to="/sign-in"
+                      className="inline-flex min-h-10 items-center rounded-full px-3.5 text-sm text-ink-muted transition-colors hover:text-white"
+                    >
+                      Sign in
+                    </Link>
+                    <Link to="/sign-up" className="btn-white min-h-10">
+                      Get started
+                    </Link>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {signedIn && menuOpen && (
           <nav
             id="mobile-nav"
             aria-label="Main"
-            className="flex flex-col gap-1 border-t border-line bg-bg px-4 pb-4 pt-3 md:hidden"
+            className={`pointer-events-auto mx-auto mt-2 flex max-w-sm flex-col gap-1 rounded-[28px] p-3 md:hidden ${glass}`}
           >
             {links}
-            <p className="truncate px-3.5 pt-2 text-sm text-ink-faint">{session?.user.email}</p>
-            <button type="button" onClick={() => void handleSignOut()} className="btn-secondary mt-2">
+            <p className="truncate px-3.5 pt-2 text-sm text-ink-muted">{session?.user.email}</p>
+            <button type="button" onClick={() => void handleSignOut()} className="btn-white mt-2">
               Sign out
             </button>
           </nav>
@@ -142,18 +138,17 @@ export default function Layout() {
 
       <main
         className={
-          onLanding ? 'w-full flex-1' : 'mx-auto w-full max-w-[1200px] flex-1 px-4 pb-20 pt-8 sm:px-6'
+          onLanding ? 'w-full flex-1' : 'mx-auto w-full max-w-[1200px] flex-1 px-4 pb-20 pt-28 sm:px-6'
         }
       >
         <Outlet />
       </main>
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-4 py-8 text-sm text-ink-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-2">
-            <LogoMark size={20} />
-            <span>ResumeMaxxer</span>
-          </div>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-4 py-10 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <Link to="/" className="text-ink" aria-label="ResumeMaxxer home">
+            <Wordmark />
+          </Link>
           <p>Built for students. Your vault is the only source of truth.</p>
         </div>
       </footer>

@@ -11,7 +11,7 @@ export default function Spinner({ label = 'Loading…' }: { label?: string }) {
         aria-hidden="true"
       >
         <circle cx="12" cy="12" r="9" fill="none" stroke="var(--line-strong)" strokeWidth="2" />
-        <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="#5683da" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" className="text-ink" strokeWidth="2" strokeLinecap="round" />
       </svg>
       <span>{label}</span>
     </div>
