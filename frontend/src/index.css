@@ -481,7 +481,7 @@
 }
 
 /* --- Welcome loader ------------------------------------------------------- */
-/* Shown once after sign-up: the dial ring draws itself, the core lights, the
+/* Shown once after sign-up: the logo turns and settles in, the bar fills, the
    whole overlay fades away. 1.6s total. */
 .welcome-stage {
   position: fixed;
@@ -493,23 +493,18 @@
   background: var(--bg);
   animation: welcome-out 1600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-.welcome-ring {
-  stroke-dasharray: 64;
-  stroke-dashoffset: 64;
-  animation: welcome-draw 800ms cubic-bezier(0.65, 0, 0.35, 1) 100ms forwards;
-}
 .welcome-core {
   transform-origin: center;
-  transform: scale(0);
-  animation: welcome-pop 500ms cubic-bezier(0.16, 1, 0.3, 1) 700ms forwards;
+  transform: scale(0.6) rotate(-90deg);
+  opacity: 0;
+  animation: welcome-pop 800ms cubic-bezier(0.16, 1, 0.3, 1) 100ms forwards;
 }
 .welcome-bar {
   transform-origin: left center;
   transform: scaleX(0);
   animation: welcome-bar 1100ms cubic-bezier(0.65, 0, 0.35, 1) 100ms forwards;
 }
-@keyframes welcome-draw { to { stroke-dashoffset: 0; } }
-@keyframes welcome-pop { to { transform: scale(1); } }
+@keyframes welcome-pop { to { transform: scale(1) rotate(0deg); opacity: 1; } }
 @keyframes welcome-bar { to { transform: scaleX(1); } }
 @keyframes welcome-out {
   0%, 75% { opacity: 1; }

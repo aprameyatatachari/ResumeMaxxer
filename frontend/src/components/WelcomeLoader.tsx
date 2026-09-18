@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { LogoMark } from './brand/Logo'
+
 const FLAG = 'resumemaxxer.welcome'
 
 /** Called by sign-up just before it navigates to the vault. */
@@ -22,8 +24,7 @@ function takeFlag(): boolean {
 }
 
 /**
- * A short, quiet welcome after creating an account: the vault-dial mark draws
- * itself, a hairline fills beneath "Setting up your vault", and the overlay
+ * A short, quiet welcome after creating an account: the logo settles in, a hairline fills beneath "Setting up your vault", and the overlay
  * fades onto the page. Decorative only, and skipped under reduced motion.
  */
 export default function WelcomeLoader() {
@@ -43,19 +44,7 @@ export default function WelcomeLoader() {
   return (
     <div className="welcome-stage" aria-hidden="true">
       <div className="flex flex-col items-center">
-        <svg viewBox="0 0 32 32" width={64} height={64} fill="none" className="text-ink">
-          <circle
-            className="welcome-ring"
-            cx="16"
-            cy="16"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            transform="rotate(-90 16 16)"
-          />
-          <circle className="welcome-core" cx="16" cy="16" r="3.6" fill="#c9aaff" />
-        </svg>
+        <LogoMark size={72} className="welcome-core text-ink" />
         <p className="mt-6 text-sm text-ink-muted">Setting up your vault</p>
         <div className="mt-3 h-px w-40 overflow-hidden bg-line">
           <div className="welcome-bar h-full w-full iri-flow bg-[image:var(--iridescent)]" />

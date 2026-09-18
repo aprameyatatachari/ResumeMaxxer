@@ -64,7 +64,7 @@ export default function Layout() {
             aria-label="ResumeMaxxer home"
             className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-white transition-transform duration-300 hover:rotate-45 ${glass}`}
           >
-            <LogoMark size={24} />
+            <LogoMark size={30} />
           </Link>
 
           <div className={`flex min-h-12 items-center gap-1 rounded-full p-1 pl-2 ${glass}`}>

@@ -1,26 +1,15 @@
-import { useId } from 'react'
-
 /**
- * The mark: a vault dial seen head-on - a ring with four bolt stubs in the
- * current text colour, and an iridescent core. Monochrome everywhere except
- * that one point of colour.
+ * The mark: the vault-door logo (public/logo-mark.png), drawn as a CSS mask
+ * so it takes the current text colour - black on light surfaces, white on the
+ * dark nav - from a single asset.
  */
 export function LogoMark({ size = 28, className = '' }: { size?: number; className?: string }) {
-  const id = useId()
   return (
-    <svg viewBox="0 0 32 32" width={size} height={size} className={className} aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#c9aaff" />
-          <stop offset="0.35" stopColor="#ffcdfd" />
-          <stop offset="0.7" stopColor="#b3e2ff" />
-          <stop offset="1" stopColor="#839aff" />
-        </linearGradient>
-      </defs>
-      <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="2.4" />
-      <circle cx="16" cy="16" r="4.2" fill={`url(#${id})`} />
-      <path d="M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
+    <span
+      aria-hidden="true"
+      className={`inline-block shrink-0 bg-current [mask:url(/logo-mark.png)_center/contain_no-repeat] ${className}`}
+      style={{ width: size, height: size }}
+    />
   )
 }
 
