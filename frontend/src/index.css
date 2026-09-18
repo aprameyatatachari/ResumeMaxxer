@@ -549,3 +549,41 @@
   0% { transform: translateY(-0.28em); opacity: 0.4; }
   100% { transform: translateY(0); opacity: 1; }
 }
+
+/* --- Split wordmark opening ------------------------------------------------ */
+.split-left {
+  transform: translate(calc(var(--split, 0) * -55vw), calc(var(--split, 0) * -18vh))
+    scale(calc(1 - var(--split, 0) * 0.45));
+  transform-origin: right center;
+  opacity: var(--word-opacity, 1);
+  will-change: transform, opacity;
+}
+.split-right {
+  transform: translate(calc(var(--split, 0) * 55vw), calc(var(--split, 0) * -18vh))
+    scale(calc(1 - var(--split, 0) * 0.45));
+  transform-origin: left center;
+  opacity: var(--word-opacity, 1);
+  will-change: transform, opacity;
+}
+.split-hero {
+  transform: translateY(calc((1 - var(--rise, 0)) * 28vh)) scale(calc(0.94 + var(--rise, 0) * 0.06));
+  opacity: var(--rise, 0);
+  filter: blur(calc((1 - var(--rise, 0)) * 8px));
+  will-change: transform, opacity;
+}
+.split-stage[data-phase='word'] .split-hero {
+  pointer-events: none;
+}
+.split-stage[data-phase='word'] .split-hero a {
+  visibility: hidden;
+}
+.split-cue {
+  opacity: var(--cue, 1);
+}
+.split-cue-line {
+  animation: split-cue 1800ms ease-in-out infinite;
+}
+@keyframes split-cue {
+  0%, 100% { transform: translateY(-6px); opacity: 0.4; }
+  50% { transform: translateY(6px); opacity: 1; }
+}

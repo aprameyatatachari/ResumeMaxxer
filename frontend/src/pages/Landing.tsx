@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 
 import DialText from '../components/DialText'
 import SiteImage from '../components/SiteImage'
+import HeroSplit from '../components/landing/HeroSplit'
 import ScrubText from '../components/landing/ScrubText'
-import { ArrowRight, Cap, Check, FileText, Pencil, Sparkle } from '../components/icons'
+import { ArrowRight, Cap, Check, FileText, Pencil } from '../components/icons'
 import { useReveal } from '../hooks/useReveal'
 import { useSession } from '../lib/auth-client'
 
@@ -149,51 +150,7 @@ export default function Landing() {
 
   return (
     <>
-      {/* Hero: the vault door in black and white, the one iridescent line. */}
-      <section className="band-void relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 pb-20 pt-32 text-center sm:px-6">
-        <SiteImage
-          src="/images/hero-vault.webp"
-          eager
-          className="hero-image mono pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-[70%_center]"
-        />
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_65%_55%_at_50%_48%,rgb(10_10_10/0.78),rgb(10_10_10/0.35)_70%,rgb(10_10_10/0.2)),linear-gradient(180deg,transparent_70%,#0a0a0a)]"
-          aria-hidden="true"
-        />
-        <p
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.04em] text-ink-muted backdrop-blur"
-          data-reveal
-        >
-          <Sparkle size={14} className="text-white" />
-          Resume tailoring for Indian students
-        </p>
-        <h1
-          className="display text-iridescent mt-7 max-w-[13ch] pb-2 text-[clamp(3rem,8.5vw,6.25rem)]"
-          data-reveal
-          style={delay(80)}
-        >
-          Your whole record, locked in one vault.
-        </h1>
-        <p
-          className="mt-6 max-w-[50ch] text-base leading-relaxed text-ink-muted sm:text-lg"
-          data-reveal
-          style={delay(160)}
-        >
-          Save your marks, internships, projects and clubs once. Hand over a job description and
-          walk out with a resume cut for that role - rewritten from what you did, never invented.
-        </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-3" data-reveal style={delay(240)}>
-          <Link to={primary.to} className="btn-iridescent group min-h-12 pr-2">
-            {primary.label}
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-white/12 transition-transform duration-300 group-hover:translate-x-0.5">
-              <ArrowRight size={15} />
-            </span>
-          </Link>
-          <a href="#how" className="btn-glass min-h-12">
-            See how it tailors
-          </a>
-        </div>
-      </section>
+      <HeroSplit primary={primary} />
 
       {/* 001 - what it is. */}
       <section className="bg-bg px-4 pt-28 sm:px-6 sm:pt-36">
