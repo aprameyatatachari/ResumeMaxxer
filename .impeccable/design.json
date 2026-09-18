@@ -1,105 +1,147 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-13T00:00:00Z",
+  "generatedAt": "2026-09-18T00:00:00Z",
   "title": "Design System: ResumeMaxxer",
   "extensions": {
     "colorMeta": {
-      "iris": { "role": "primary", "displayName": "Electric Iris", "canonical": "#5683da" },
-      "ember": { "role": "secondary", "displayName": "Ember Pulse", "canonical": "#ff8964" },
-      "void": { "role": "neutral", "displayName": "Void", "canonical": "#090a0c" },
-      "obsidian": { "role": "neutral", "displayName": "Obsidian Canvas", "canonical": "#303236" }
+      "ink": { "role": "primary", "displayName": "Graphite Ink", "canonical": "#1a1a1a", "tonalRamp": ["#0a0a0a", "#1a1a1a", "#3d3d3d", "#4d4d4d", "#6e6e6e", "#c4c4c4", "#e6e6e6", "#f4f4f4"] },
+      "iri-lilac": { "role": "primary", "displayName": "Iridescent Lilac", "canonical": "#c9aaff" },
+      "iri-butter": { "role": "primary", "displayName": "Iridescent Butter", "canonical": "#feffbc" },
+      "iri-blush": { "role": "primary", "displayName": "Iridescent Blush", "canonical": "#ffcdfd" },
+      "iri-sky": { "role": "primary", "displayName": "Iridescent Sky", "canonical": "#b3e2ff" },
+      "iri-peri": { "role": "primary", "displayName": "Iridescent Periwinkle", "canonical": "#839aff" },
+      "void": { "role": "neutral", "displayName": "Void", "canonical": "#0a0a0a" },
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#ffffff" },
+      "paper-2": { "role": "neutral", "displayName": "Paper 2", "canonical": "#f4f4f4" }
     },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headline, usually iridescent." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings, often dial text." },
+      "title": { "displayName": "Title", "purpose": "Large statement paragraphs." },
+      "body": { "displayName": "Body", "purpose": "Interface and reading text." },
+      "label": { "displayName": "Label", "purpose": "Uppercase numbered section markers." }
+    },
+    "gradients": [
+      { "name": "iridescent", "value": "linear-gradient(90deg, #c9aaff, #feffbc 25%, #ffcdfd 50%, #b3e2ff 75%, #839aff)", "purpose": "Hero headline, one focal line, hero CTA ring, logo core." }
+    ],
     "shadows": [
-      { "name": "frame", "value": "0 6px 25px rgb(0 0 0 / 0.5)", "purpose": "Product frames, auth dial." },
-      { "name": "float", "value": "0 4px 16px rgb(0 0 0 / 0.35)", "purpose": "Floating panels and dialogs." },
-      { "name": "iris-glow", "value": "0 0 0 1px rgb(86 131 218 / 0.5), 0 8px 28px rgb(86 131 218 / 0.45)", "purpose": "Primary button hover." }
+      { "name": "nav-glass", "value": "0 10px 30px -10px rgb(0 0 0 / 0.6)", "purpose": "Floating nav cluster (with backdrop blur, rgb(20 20 20 / 0.9) fill)." },
+      { "name": "primary-halo", "value": "0 0 0 4px rgb(131 154 255 / 0.18), 0 10px 30px -10px rgb(131 154 255 / 0.6)", "purpose": "Primary pill hover." },
+      { "name": "iridescent-glow", "value": "0 0 28px -4px rgb(201 170 255 / 0.55)", "purpose": "Iridescent pill hover." },
+      { "name": "dot-well", "value": "inset 0 2px 30px rgb(0 0 0 / 0.8), inset 0 0 0 1px rgb(255 255 255 / 0.06)", "purpose": "Dark dotted well at top of feature cards." },
+      { "name": "orb", "value": "0 0 0 10px rgb(255 255 255 / 0.04), 0 0 0 22px rgb(255 255 255 / 0.025), inset 0 1px 1px rgb(255 255 255 / 0.4), 0 18px 40px rgb(0 0 0 / 0.6)", "purpose": "Glossy icon orb." },
+      { "name": "focus-ring", "value": "0 0 0 2px var(--bg), 0 0 0 4px var(--focus-ring-solid)", "purpose": "All focus-visible states." }
     ],
     "motion": [
-      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Reveals, glows, entrances." },
-      { "name": "ease-in-out-quart", "value": "cubic-bezier(0.76, 0, 0.24, 1)", "purpose": "Deliberate moves." }
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Reveals (1000ms, 24px rise + 8px blur), hero settle (2400ms), button press." },
+      { "name": "ease-in-out-quart", "value": "cubic-bezier(0.76, 0, 0.24, 1)", "purpose": "Deliberate moves." },
+      { "name": "dial-click", "value": "240ms cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Dial text letter settling; full line set within 1300ms." },
+      { "name": "marquee", "value": "40s linear infinite", "purpose": "Facts marquee; stopped under reduced motion." },
+      { "name": "welcome", "value": "1600ms", "purpose": "One-time post sign-up loader." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
       { "name": "lg", "value": "1024px" }
     ]
   },
   "components": [
     {
       "name": "Primary Button", "kind": "button", "refersTo": "button-primary",
-      "description": "The one most important action per screen.",
+      "description": "Ink pill; the one main action per screen.",
       "html": "<button class=\"ds-btn-primary\">Tailor my resume</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:1px solid transparent;border-radius:9999px;background:#5683da;color:#fff;font:600 14px/1 Inter,system-ui,sans-serif;letter-spacing:-0.01em;cursor:pointer;transition:background-color 200ms,box-shadow 300ms cubic-bezier(0.16,1,0.3,1)}.ds-btn-primary:hover{background:#6690e2;box-shadow:0 0 0 1px rgb(86 131 218/.5),0 8px 28px rgb(86 131 218/.45)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(86 131 218/.35)}.ds-btn-primary:active{transform:translateY(1px)}"
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:44px;padding:0 1.35rem;border:1px solid transparent;border-radius:1024px;background:#1a1a1a;color:#fff;font:500 14px Geist,system-ui,sans-serif;letter-spacing:-0.01em;cursor:pointer;transition:background-color 200ms,box-shadow 250ms,transform 200ms cubic-bezier(0.16,1,0.3,1)}.ds-btn-primary:hover{background:#000;box-shadow:0 0 0 4px rgb(131 154 255/.18),0 10px 30px -10px rgb(131 154 255/.6)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #1a1a1a}.ds-btn-primary:active{transform:scale(.97)}"
     },
     {
       "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary",
-      "description": "Outlined pill that inverts on hover.",
+      "description": "Outlined pill.",
       "html": "<button class=\"ds-btn-secondary\">Open vault</button>",
-      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:1px solid #a9a9aa;border-radius:9999px;background:transparent;color:#050506;font:600 14px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:all 200ms}.ds-btn-secondary:hover{background:#050506;border-color:#050506;color:#fff}.ds-btn-secondary:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(86 131 218/.35)}"
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;min-height:44px;padding:0 1.35rem;border:1px solid #c4c4c4;border-radius:1024px;background:transparent;color:#1a1a1a;font:500 14px Geist,system-ui,sans-serif;cursor:pointer;transition:border-color 200ms}.ds-btn-secondary:hover{border-color:#1a1a1a}.ds-btn-secondary:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #1a1a1a}.ds-btn-secondary:active{transform:scale(.97)}"
+    },
+    {
+      "name": "Iridescent Button", "kind": "button", "refersTo": "button-iridescent",
+      "description": "Void pill with iridescent ring; hero only.",
+      "html": "<div style=\"background:#0a0a0a;padding:16px\"><button class=\"ds-btn-iri\">Get started</button></div>",
+      "css": ".ds-btn-iri{display:inline-flex;align-items:center;min-height:44px;padding:0 1.35rem;border:1.5px solid transparent;border-radius:1024px;background:linear-gradient(#0a0a0a,#0a0a0a) padding-box,linear-gradient(90deg,#c9aaff,#feffbc 25%,#ffcdfd 50%,#b3e2ff 75%,#839aff) border-box;color:#fff;font:500 14px Geist,system-ui,sans-serif;cursor:pointer;transition:box-shadow 250ms}.ds-btn-iri:hover{box-shadow:0 0 28px -4px rgb(201 170 255/.55)}.ds-btn-iri:focus-visible{outline:none;box-shadow:0 0 0 2px #0a0a0a,0 0 0 4px #fff}"
     },
     {
       "name": "White Button", "kind": "button", "refersTo": "button-white",
-      "description": "CTA on dark bands.",
-      "html": "<div style=\"background:#090a0c;padding:16px\"><button class=\"ds-btn-white\">Get started</button></div>",
-      "css": ".ds-btn-white{display:inline-flex;align-items:center;min-height:44px;padding:10px 22px;border:0;border-radius:9999px;background:#fff;color:#090a0c;font:600 14px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background-color 200ms}.ds-btn-white:hover{background:#e5e5e7}.ds-btn-white:focus-visible{outline:none;box-shadow:0 0 0 4px rgb(255 255 255/.4)}"
+      "description": "CTA on dark imagery and in the nav.",
+      "html": "<div style=\"background:#0a0a0a;padding:16px\"><button class=\"ds-btn-white\">Sign up</button></div>",
+      "css": ".ds-btn-white{display:inline-flex;align-items:center;min-height:44px;padding:0 1.35rem;border:0;border-radius:1024px;background:#f2f2f2;color:#0a0a0a;font:500 14px Geist,system-ui,sans-serif;cursor:pointer;transition:background-color 200ms}.ds-btn-white:hover{background:#fff}.ds-btn-white:focus-visible{outline:none;box-shadow:0 0 0 2px #0a0a0a,0 0 0 4px #fff}"
     },
     {
       "name": "Input", "kind": "input", "refersTo": "input",
-      "description": "4px hairline field with label.",
-      "html": "<label class=\"ds-label\">College</label><input class=\"ds-input\" placeholder=\"e.g. NIT Trichy\">",
-      "css": ".ds-label{display:block;margin-bottom:6px;font:500 13px Inter,system-ui,sans-serif;color:#303236}.ds-input{width:100%;min-height:44px;padding:9.6px 12.8px;border:1px solid #a9a9aa;border-radius:4px;background:#fff;color:#050506;font:15px Inter,system-ui,sans-serif;transition:border-color 160ms,box-shadow 160ms}.ds-input::placeholder{color:#5d5f64}.ds-input:hover{border-color:#5d5f64}.ds-input:focus{outline:none;border-color:#5683da;box-shadow:0 0 0 3px rgb(86 131 218/.25)}"
+      "description": "Filled 14px-radius field with label.",
+      "html": "<label class=\"ds-label\">College</label><input class=\"ds-input\" placeholder=\"e.g. NIT Trichy (sample)\">",
+      "css": ".ds-label{display:block;margin-bottom:.4rem;font:500 13px Geist,system-ui,sans-serif;color:#4d4d4d}.ds-input{width:100%;min-height:44px;padding:.6rem .95rem;border:1px solid #e6e6e6;border-radius:14px;background:#f4f4f4;color:#1a1a1a;font:14px Geist,system-ui,sans-serif;transition:border-color 160ms,box-shadow 160ms,background-color 160ms}.ds-input::placeholder{color:#6e6e6e}.ds-input:hover{border-color:#c4c4c4}.ds-input:focus{outline:none;background:#fff;border-color:#1a1a1a;box-shadow:0 0 0 1px #1a1a1a}"
     },
     {
       "name": "Chips", "kind": "chip", "refersTo": "chip",
-      "description": "Iris and ember category tags.",
+      "description": "Neutral and lilac-tinted pill tags.",
       "html": "<span class=\"ds-chip\">Python</span> <span class=\"ds-chip ds-chip-ember\">Must-have</span>",
-      "css": ".ds-chip{display:inline-flex;padding:4px 10px;border-radius:9999px;background:rgb(86 131 218/.12);color:#3a64b8;font:500 11px Inter,system-ui,sans-serif}.ds-chip-ember{background:rgb(255 137 100/.14);color:#b24a26}"
+      "css": ".ds-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 .7rem;border-radius:1024px;border:1px solid #e6e6e6;background:#f4f4f4;color:#4d4d4d;font:500 12px Geist,system-ui,sans-serif}.ds-chip-ember{background:rgb(201 170 255/.18);border-color:rgb(201 170 255/.4);color:#6b3fc4}"
     },
     {
       "name": "Card", "kind": "card", "refersTo": "card",
-      "description": "Hairline surface, no shadow.",
-      "html": "<div class=\"ds-card\"><strong>Backend Intern</strong><p>Payments team, 6 months.</p></div>",
-      "css": ".ds-card{background:#fff;border:1px solid #d1d1d1;border-radius:12px;padding:24px;font:15px/1.5 Inter,system-ui,sans-serif;color:#050506}.ds-card p{margin:4px 0 0;color:#303236}"
+      "description": "28px hairline surface, no shadow.",
+      "html": "<div class=\"ds-card\"><strong>Backend Intern (sample)</strong><p>Payments team, 6 months.</p></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #e6e6e6;border-radius:28px;padding:1.5rem;font:15px/1.5 Geist,system-ui,sans-serif;color:#1a1a1a}.ds-card p{margin:4px 0 0;color:#4d4d4d}"
     },
     {
-      "name": "Vault Dial Logo", "kind": "custom", "refersTo": "logo",
-      "description": "Iris ring, four bolts, ember core.",
-      "html": "<span class=\"ds-wordmark\"><svg viewBox=\"0 0 32 32\" width=\"28\" height=\"28\"><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"none\" stroke=\"#5683da\" stroke-width=\"2.4\"/><circle cx=\"16\" cy=\"16\" r=\"3.6\" fill=\"#ff8964\"/><path d=\"M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5\" stroke=\"#5683da\" stroke-width=\"2.4\" stroke-linecap=\"round\"/></svg>ResumeMaxxer</span>",
-      "css": ".ds-wordmark{display:inline-flex;align-items:center;gap:8px;font:600 15px Inter,system-ui,sans-serif;letter-spacing:-0.02em;color:#050506}"
+      "name": "Floating Nav", "kind": "nav", "refersTo": "nav",
+      "description": "Dark-glass round home mark plus pill cluster.",
+      "html": "<div class=\"ds-nav\"><span class=\"ds-nav-home\"><svg viewBox=\"0 0 32 32\" width=\"24\" height=\"24\"><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\"/></svg></span><div class=\"ds-nav-pill\"><a class=\"ds-nav-link is-active\">Vault</a><a class=\"ds-nav-link\">Tailor</a><button class=\"ds-nav-cta\">Sign up</button></div></div>",
+      "css": ".ds-nav{display:flex;gap:8px;align-items:center;font:14px Geist,system-ui,sans-serif}.ds-nav-home,.ds-nav-pill{border:1px solid rgb(255 255 255/.1);background:rgb(20 20 20/.9);box-shadow:0 10px 30px -10px rgb(0 0 0/.6);backdrop-filter:blur(24px);color:#fff;border-radius:9999px}.ds-nav-home{display:grid;place-items:center;width:48px;height:48px;transition:transform 300ms}.ds-nav-home:hover{transform:rotate(45deg)}.ds-nav-pill{display:flex;align-items:center;gap:4px;padding:4px 4px 4px 8px}.ds-nav-link{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:9999px;color:#c2c2c2;cursor:pointer;transition:color 200ms}.ds-nav-link:hover{color:#fff}.ds-nav-link.is-active{background:rgb(255 255 255/.12);color:#fff}.ds-nav-cta{min-height:40px;padding:0 1.35rem;border:0;border-radius:1024px;background:#f2f2f2;color:#0a0a0a;font:500 14px Geist,system-ui,sans-serif;cursor:pointer}.ds-nav-cta:hover{background:#fff}"
+    },
+    {
+      "name": "Section Marker", "kind": "custom", "refersTo": "section-mark",
+      "description": "Numbered uppercase landing section label.",
+      "html": "<p class=\"ds-mark\"><span class=\"ds-mark-num\">001</span><span class=\"ds-mark-dot\"></span>What it is</p>",
+      "css": ".ds-mark{display:inline-flex;align-items:center;gap:.6rem;font:500 12px Geist,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#6e6e6e}.ds-mark-dot{width:6px;height:6px;border-radius:9999px;background:#1a1a1a}"
+    },
+    {
+      "name": "Iridescent Headline + Logo", "kind": "custom", "refersTo": "logo",
+      "description": "Vault-dial mark and iridescent display text.",
+      "html": "<div class=\"ds-hero\"><span class=\"ds-wordmark\"><svg viewBox=\"0 0 32 32\" width=\"28\" height=\"28\"><defs><linearGradient id=\"dsg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#c9aaff\"/><stop offset=\".35\" stop-color=\"#ffcdfd\"/><stop offset=\".7\" stop-color=\"#b3e2ff\"/><stop offset=\"1\" stop-color=\"#839aff\"/></linearGradient></defs><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\"/><circle cx=\"16\" cy=\"16\" r=\"4.2\" fill=\"url(#dsg)\"/><path d=\"M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"/></svg>ResumeMaxxer</span><h1 class=\"ds-display\">Your record, tailored.</h1></div>",
+      "css": ".ds-hero{background:#0a0a0a;color:#f5f5f5;padding:24px;border-radius:28px}.ds-wordmark{display:inline-flex;align-items:center;gap:8px;font:600 15px Geist,system-ui,sans-serif;letter-spacing:-0.04em}.ds-display{margin:16px 0 0;font:600 56px/1 Geist,system-ui,sans-serif;letter-spacing:-0.06em;background:linear-gradient(90deg,#c9aaff,#feffbc 25%,#ffcdfd 50%,#b3e2ff 75%,#839aff);-webkit-background-clip:text;background-clip:text;color:transparent}"
     }
   ],
   "narrative": {
-    "northStar": "The Aurora Vault",
-    "overview": "Picture a midnight observatory where your whole record is kept. The visual language is Huly's: a near-black void, graphite surfaces, pill controls and hairline edges. One electric iris blue and one ember coral tell the whole colour story. The aurora beam appears once per page, and here it reads as light leaking out of a vault door. Night is the native mode; in day mode the content bands turn white, but the spectacle stays dark in both themes through the .band-void scope. Nothing on screen may look like a statistic, a testimonial or a real person unless it is one.",
+    "northStar": "The Monochrome Vault",
+    "overview": "The visual language derives from the Conicorn Webflow template: a white-and-graphite page, Geist set huge and tight, pills for every control, fat rounded cards, black-and-white photography, and one pastel iridescent gradient (lilac, butter, blush, sky, periwinkle). Everything is grey until something matters; then it catches the light. The gradient is the only colour story, and it is spent on the hero headline, one focal line per page, the logo core and the hero CTA ring.\n\nDay is the native mode. Night inverts the greys and keeps the gradient unchanged. Sections that must stay dark in both themes (the nav cluster, the auth image panel, dark feature wells) use the void band scope, which re-declares every night token for its subtree. The landing page reads as a numbered editorial sequence (001 What it is, 002 Why it works, 003 Capabilities, 004 Process, 005 The output, 006 Pricing), each opened by a small uppercase section marker.\n\nHonesty is a visual constraint: nothing on screen may look like a statistic, testimonial, customer logo or real person unless it is one. Sample content is visibly labelled as sample.",
     "keyCharacteristics": [
-      "Iris blue and ember coral are the only accents; everything else is graphite, white and grey.",
-      "Every button, chip, toggle and nav item is a full pill (9999px). Fields get 4px corners, cards 12px, large dark panels 30px.",
-      "Semantic tokens (bg, surface, ink, line, danger, success) change between day and night. The raw palette stays the same.",
-      "Dark spectacle bands alternate with content bands that follow the theme.",
-      "One custom line-icon set and one vault-dial mark. No emoji or unicode glyphs stand in for icons.",
-      "Motion is slow and expo-eased, and it is reduced or switched off under prefers-reduced-motion."
+      "Monochrome greys plus one iridescent pastel gradient; no other accent.",
+      "Geist only, displayed at 600 weight with -0.06em tracking and line-height 1.",
+      "Every button, chip and nav item is a full pill (1024px). Fields 14px, cards 28px, big image panels 44px.",
+      "All photography is grayscale (`grayscale(1) contrast(1.05)`).",
+      "Numbered section markers (001 to 006) structure the landing page.",
+      "Motion is slow and expo-eased; every animation has a finished reduced-motion state."
     ],
     "rules": [
-      { "name": "The Two Voices Rule", "body": "Iris and ember are the only accent colours. Add no third accent, and no status colours beyond danger and success.", "section": "colors" },
-      { "name": "The Semantic-Only Rule", "body": "Inside components, use ink, surface, line and the other semantic tokens, never raw hex, unless the element is meant to look the same in both themes.", "section": "colors" },
-      { "name": "The Void Band Rule", "body": "A section that must stay dark in both themes gets .band-void, which re-declares every night token for everything inside it.", "section": "colors" },
-      { "name": "The Display Floor Rule", "body": "General Sans is only for display text at 28px and up. Nav, buttons, labels and body text always use Inter.", "section": "typography" },
-      { "name": "The Borders-Not-Shadows Rule", "body": "Dark cards are set apart by hairline borders and surface colour steps, not drop shadows.", "section": "elevation" }
+      { "name": "The One Light Rule", "body": "The iridescent gradient is the only colour. Use it on the hero headline and at most one other focal line per page, never on body copy or as a large fill.", "section": "colors" },
+      { "name": "The Semantic-Only Rule", "body": "Components use the semantic tokens (bg, surface, ink, line) so they flip between day and night; raw values only for elements that must look identical in both themes (white pill, glass pill, dot well, orb).", "section": "colors" },
+      { "name": "The Void Band Rule", "body": "Anything that stays dark in both themes lives inside the void band scope, which re-declares all night tokens.", "section": "colors" },
+      { "name": "The Tight Display Rule", "body": "Display text is always line-height 1 with negative tracking (-0.06em) and balanced wrapping; never loosen it.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest; shadows belong to the nav, the dark signature objects, and hover/focus states.", "section": "elevation" }
     ],
     "dos": [
       "Do use the semantic tokens so every screen works in day and night.",
-      "Do wrap any always-dark section in .band-void.",
-      "Do use exactly one .btn-primary per screen, and .btn-white for CTAs on dark bands.",
-      "Do take every icon from icons.tsx.",
-      "Do label sample content visibly as sample or example.",
-      "Do give every animation a finished reduced-motion state."
+      "Do wrap any always-dark section in the void band scope.",
+      "Do keep all photography grayscale.",
+      "Do use one primary pill per screen; white or glass pills on dark imagery; the iridescent pill only in the hero.",
+      "Do open each landing section with a numbered section marker.",
+      "Do state only true product facts, and label sample content visibly as sample or example.",
+      "Do give every animation a finished reduced-motion state (dial and scrub text render final, marquee, loom and hero settle stop)."
     ],
     "donts": [
-      "Don't invent statistics, user counts, success rates, logos, testimonials or quotes.",
-      "Don't add a third accent colour or use ember as a button fill.",
-      "Don't use unicode glyphs, emoji or third-party icon sets as icons.",
-      "Don't show the aurora beam more than once per page.",
-      "Don't use General Sans below 28px or for interface text.",
-      "Don't replay the VaultDoor on normal navigation."
+      "Don't invent statistics, user counts, success rates, customer logos, testimonials or quotes.",
+      "Don't add any accent colour beyond the iridescent spectrum, or use the gradient on body text or large fills.",
+      "Don't show colour photography.",
+      "Don't use square or small-radius buttons; controls are pills.",
+      "Don't add drop shadows to ordinary cards.",
+      "Don't use emoji or unicode glyphs as icons.",
+      "Don't replay the welcome loader on normal navigation."
     ]
   }
 }
