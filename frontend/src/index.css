@@ -170,7 +170,7 @@
   .text-iridescent {
     background: var(--iridescent);
     background-size: 200% 100%;
-    animation: iri-flow 20s linear infinite;
+    animation: iri-flow 30s linear infinite;
     /* Tight tracking lets the last glyph overhang its box, and background-clip
        only paints inside the box - pad the ink area so it is never cut. */
     padding-inline: 0.06em;
@@ -282,7 +282,7 @@
       linear-gradient(#0a0a0a, #0a0a0a) padding-box,
       var(--iridescent) border-box;
     background-size: 100% 100%, 200% 100%;
-    animation: iri-flow-border 20s linear infinite;
+    animation: iri-flow-border 30s linear infinite;
     border: 1.5px solid transparent;
     color: #fff;
   }
@@ -600,7 +600,7 @@
 /* --- Iridescent flow --------------------------------------------------------- */
 .iri-flow {
   background-size: 200% 100%;
-  animation: iri-flow 20s linear infinite;
+  animation: iri-flow 30s linear infinite;
 }
 @keyframes iri-flow {
   from { background-position: 0% 0; }
