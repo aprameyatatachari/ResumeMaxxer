@@ -1,14 +1,18 @@
 /**
- * The mark: the vault-door logo (public/logo-mark.png), drawn as a CSS mask
- * so it takes the current text colour - black on light surfaces, white on the
- * dark nav - from a single asset.
+ * The mark: the full-colour logo (public/logo-mark.png, a transparent cut of
+ * public/images/logo.png). Decorative - every use sits next to the name or
+ * inside a link that carries it.
  */
 export function LogoMark({ size = 28, className = '' }: { size?: number; className?: string }) {
   return (
-    <span
+    <img
+      src="/logo-mark.png"
+      alt=""
       aria-hidden="true"
-      className={`inline-block shrink-0 bg-current [mask:url(/logo-mark.png)_center/contain_no-repeat] ${className}`}
-      style={{ width: size, height: size }}
+      width={size}
+      height={size}
+      className={`inline-block shrink-0 select-none ${className}`}
+      draggable={false}
     />
   )
 }
